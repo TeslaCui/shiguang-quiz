@@ -30,6 +30,39 @@ $('#auth-logout').onclick=async()=>{if(db)await db.auth.signOut();user=null;upda
 async function syncUserData(){if(!user||!db)return;const [h,w]=await Promise.all([db.from('practice_history').select('*').eq('user_id',user.id).order('answered_at',{ascending:true}),db.from('wrong_questions').select('*').eq('user_id',user.id)]);if(!h.error&&h.data?.length){write('practice-history',h.data.map(x=>({name:'中华文化知识库',time:new Date(x.answered_at).toLocaleString('zh-CN'),total:1,correct:x.is_correct?1:0,score:x.is_correct?100:0})));updateStats()}if(!w.error&&w.data?.length)write('wrong-questions',w.data.map(x=>x.question));renderReview()}
 async function ensureProfile(){if(!user||!db||!user.email)return;const p=user.user_metadata||{};if(p.username)await db.from('profiles').upsert({user_id:user.id,username:p.username,phone:p.phone||'',email:user.email},{onConflict:'user_id'})}
 async function handleAuthSubmit(){if(!db)return $('#auth-message').textContent='登录服务暂不可用';const password=$('#auth-password').value;if(password.length<6)return $('#auth-message').textContent='密码至少需要 6 位';if(authMode==='signup'){const username=$('#auth-username').value.trim(),phone=$('#auth-phone').value.trim(),email=$('#auth-email').value.trim(),confirm=$('#auth-confirm').value;if(!username||username.length<2)return $('#auth-message').textContent='请输入至少 2 个字符的用户名';if(!email||!email.includes('@'))return $('#auth-message').textContent='请输入有效邮箱';if(password!==confirm)return $('#auth-message').textContent='两次输入的密码不一致';const r=await db.auth.signUp({email,password,options:{data:{username,phone}}});if(r.error){const m=r.error.message.toLowerCase();$('#auth-message').textContent=m.includes('rate limit')?'注册邮件发送过于频繁，请稍后再试。也可以直接使用已有账号登录。':r.error.message}else{closeAuth();toast('注册成功，请查收验证邮件')}}else{const identifier=$('#auth-identifier').value.trim();if(!identifier)return $('#auth-message').textContent='请输入用户名、手机号或邮箱';let email=identifier;if(!identifier.includes('@')){const lookup=await db.rpc('lookup_login_email',{p_identifier:identifier});if(lookup.error||!lookup.data)return $('#auth-message').textContent='未找到该用户名或手机号，请检查后重试';email=lookup.data}const r=await db.auth.signInWithPassword({email,password});if(r.error)$('#auth-message').textContent=r.error.message;else{user=r.data.user;closeAuth();updateAuth();await ensureProfile();await syncUserData();toast('登录成功')}}}
+async function handleAuthSubmit(){
+  if(!db)return $('#auth-message').textContent='登录服务暂不可用';
+  const password=$('#auth-password').value;
+  if(password.length<6)return $('#auth-message').textContent='密码至少需要 6 位';
+  if(authMode==='signup'){
+    const username=$('#auth-username').value.trim(),phone=$('#auth-phone').value.trim(),email=$('#auth-email').value.trim(),confirm=$('#auth-confirm').value;
+    if(!username||username.length<2)return $('#auth-message').textContent='请输入至少 2 个字符的用户名';
+    if(!phone||/^\+?[0-9\- ]{7,}$/.test(phone)===false)return $('#auth-message').textContent='请输入有效手机号';
+    if(!email||!email.includes('@'))return $('#auth-message').textContent='请输入有效邮箱';
+    if(password!==confirm)return $('#auth-message').textContent='两次输入的密码不一致';
+    const r=await db.auth.signUp({email,password,options:{data:{username,phone}}});
+    if(r.error){
+      const m=r.error.message.toLowerCase();
+      $('#auth-message').textContent=m.includes('rate limit')?'注册请求过于频繁，请稍后再试。':r.error.message;
+    }else{
+      user=r.data.user;closeAuth();updateAuth();toast('注册成功，可以直接登录');
+    }
+  }else{
+    const identifier=$('#auth-identifier').value.trim();
+    if(!identifier)return $('#auth-message').textContent='请输入邮箱、手机号或用户名';
+    let credentials;
+    if(identifier.includes('@'))credentials={email:identifier,password};
+    else if(/^\+?[0-9\- ]{7,}$/.test(identifier))credentials={phone:identifier.replace(/[\- ]/g,''),password};
+    else{
+      const lookup=await db.rpc('lookup_login_email',{p_identifier:identifier});
+      if(lookup.error||!lookup.data)return $('#auth-message').textContent='未找到该用户名或手机号，请检查后重试';
+      credentials={email:lookup.data,password};
+    }
+    const r=await db.auth.signInWithPassword(credentials);
+    if(r.error)$('#auth-message').textContent=r.error.message;
+    else{user=r.data.user;closeAuth();updateAuth();await ensureProfile();await syncUserData();toast('登录成功')}
+  }
+}
 $('#auth-submit').onclick=handleAuthSubmit;
 renderBanks();renderReview();updateStats();fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());if(db)db.auth.getSession().then(async r=>{user=r.data.session?.user||null;updateAuth();await ensureProfile();await syncUserData()});else updateAuth();
 if(db)db.auth.onAuthStateChange(async(_event,session)=>{if(session){user=session.user;await ensureProfile();updateAuth()}});
