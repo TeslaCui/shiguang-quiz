@@ -1,4 +1,5 @@
 .auth-panel input{position:relative;z-index:2;background:#fff;color:var(--ink);pointer-events:auto}
+.auth-panel input[hidden]{display:none}
 .auth-panel input:focus{outline:2px solid #7254df55;border-color:var(--purple)}
 .google-auth{width:100%;background:#fff;border:1px solid #dedbe6;border-radius:8px;padding:11px 14px;margin:10px 0 14px;font-size:12px;font-weight:600}
 .google-auth:hover{background:#faf9ff;border-color:#b8ace9}
