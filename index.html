@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#7254df" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -27,6 +28,7 @@
     <main class="main">
       <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">总览</h1></div><div class="top-actions"><button class="help-btn">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout" hidden>退出登录</button></div></header>
       <div id="toast" class="toast"></div>
+      <div id="file-warning" class="file-warning" hidden>当前是本地文件模式。请使用 HTTPS 网站地址打开，否则题库文件和登录会话可能无法正常读取。</div>
       <section id="home-view" class="view active-view">
         <div class="hero"><div><span class="eyebrow warm">今日学习计划</span><h2>把碎片时间，<em>变成进步。</em></h2><p>每一次练习都算数，今天也为目标前进一点点。</p><button class="primary" data-view="practice">继续刷题 <span>→</span></button></div><div class="hero-art"><div class="sun"></div><div class="book">✎</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div></div>
         <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>本地练习记录</small><strong id="total-answered">0</strong><span class="trend">完成答题后更新</span></div></div><div class="stat-card"><span class="stat-icon orange">✓</span><div><small>题库题目</small><strong id="bank-total">0</strong><span class="trend">中华文化知识库</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">根据练习记录计算</span></div></div></div>
@@ -40,7 +42,7 @@
       <section id="wrong-view" class="view"><div class="view-title"><div><span class="eyebrow">REVIEW & HISTORY</span><h2>错题本</h2><p>复习答错的题目，巩固薄弱知识点。</p></div><button class="outline" id="clear-wrong">清空错题</button></div><div class="recent-list" id="wrong-list"></div><div class="section-head recent-head"><div><h3>刷题记录</h3><p>你的每一次练习都会被记录</p></div></div><div class="recent-list" id="history-list"></div></section>
     </main>
   </div>
-  <div class="auth-modal" id="auth-modal" hidden><div class="auth-panel"><button class="auth-close" id="auth-close">×</button><span class="eyebrow">YOUR ACCOUNT</span><h2 id="auth-title">登录拾光题库</h2><p id="auth-subtitle">登录后，刷题记录和错题本会在手机、电脑间同步。</p><input id="auth-email" type="email" placeholder="邮箱" autocomplete="email"><input id="auth-password" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password"><button class="primary auth-submit" id="auth-submit">登录</button><button class="text-btn auth-switch" id="auth-switch">没有账号？注册</button><div class="auth-message" id="auth-message"></div></div></div>
+  <div class="auth-modal" id="auth-modal" hidden><div class="auth-panel"><button class="auth-close" id="auth-close">×</button><span class="eyebrow">YOUR ACCOUNT</span><h2 id="auth-title">登录拾光题库</h2><p id="auth-subtitle">使用邮箱、手机号或用户名登录。</p><button class="google-auth" id="google-auth"><span>G</span> 使用 Google 登录</button><div class="auth-divider"><span id="auth-divider-text">或使用账号密码</span></div><input id="auth-identifier" type="text" placeholder="用户名、手机号或邮箱" autocomplete="username"><input id="auth-username" type="text" placeholder="用户名（注册后可用于登录）" autocomplete="nickname" hidden><input id="auth-phone" type="tel" placeholder="手机号（可选）" autocomplete="tel" hidden><input id="auth-email" type="email" placeholder="邮箱" autocomplete="email" hidden><input id="auth-password" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password"><input id="auth-confirm" type="password" placeholder="确认密码" autocomplete="new-password" hidden><button class="primary auth-submit" id="auth-submit">登录</button><button class="text-btn auth-switch" id="auth-switch">没有账号？注册</button><div class="auth-message" id="auth-message"></div></div></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="app.js"></script>
   <script>if('serviceWorker' in navigator && location.protocol !== 'file:'){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
 </body>
