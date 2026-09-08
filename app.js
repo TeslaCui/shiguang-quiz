@@ -662,7 +662,9 @@ $('#help-close')&&($('#help-close').onclick=()=>{$('#help-modal').hidden=true});
 $('#practice-exit')&&($('#practice-exit').onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;currentQ=null;sessionRecent=[];showView('home');toast('已退出，本场练习已记录')});
 let qStart=0;
 let CUR_VER='',REMOTE_VER='';
-const verSet=(txt)=>{for(const id of ['#ver-tag','#ver-tag2']){const el=$(id);if(el)el.textContent='v'+txt}};
+const verParts=(v)=>String(v||'').split('.').map((n,i)=>parseInt(n,10)||0);
+function newerVer(a,b){const A=verParts(a),B=verParts(b);for(let i=0;i<3;i++){if(A[i]>B[i])return true;if(A[i]<B[i])return false}return false}
+const verSet=(txt)=>{for(const id of ['#ver-tag','#ver-tag2']){const el=$(id);if(el)el.textContent=String(txt)}};
 async function loadVerJson(){
   try{const r=await fetch('version.json',{cache:'no-store'});const j=await r.json();CUR_VER=String(j.version||'');verSet(CUR_VER||'?')}catch(e){verSet('?')}
 }
@@ -672,14 +674,14 @@ async function checkUpdate(manual){
     const r=await fetch('https://raw.githubusercontent.com/TeslaCui/shiguang-quiz/main/version.json',{cache:'no-store'});
     const j=await r.json();REMOTE_VER=String(j.version||'');
     if(!CUR_VER){await loadVerJson()}
-    const newer=REMOTE_VER&&CUR_VER&&Number(REMOTE_VER)>Number(CUR_VER);
+    const newer=REMOTE_VER&&CUR_VER&&newerVer(REMOTE_VER,CUR_VER);
     const tag=$('#ver-new');if(tag)tag.hidden=!newer;
     if(newer){
-      if(bt){bt.textContent='发现新版本 v'+REMOTE_VER+'，点击刷新';bt.classList.add('active');bt.onclick=()=>location.reload()}
-      if(!manual)toast('有可用新版本 v'+REMOTE_VER+'，请刷新页面');
+      if(bt){bt.textContent='发现新版本 '+REMOTE_VER+'，点击刷新';bt.classList.add('active');bt.onclick=()=>location.reload()}
+      if(!manual)toast('有可用新版本 '+REMOTE_VER+'，请刷新页面');
     }else if(manual){
-      if(bt)bt.textContent='已是最新版本 v'+CUR_VER;
-      toast('当前已是最新版本 v'+CUR_VER);
+      if(bt)bt.textContent='已是最新版本 '+CUR_VER;
+      toast('当前已是最新版本 '+CUR_VER);
       setTimeout(()=>{if(bt)bt.textContent='检查更新'},2500);
     }
   }catch(e){if(manual){toast('无法连接更新源，请稍后再试');if(bt)bt.textContent='检查更新'}}
