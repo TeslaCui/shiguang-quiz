@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const SUPABASE_URL='https://wcnmufiabeftlsregamh.supabase.co',SUPABASE_KEY='sb_publishable_FHlEZrROrCVM1WLdoij5Cw_7Ue64M1X';
 const db=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'shiguang-quiz-auth'}});
-let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null;
+let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0;
 const titles={home:'总览',bank:'我的题库',practice:'开始刷题',wrong:'错题本'};
 // ---------- per-user namespaced local storage ----------
 const NS=()=>user?.id||'anon';
@@ -57,6 +57,14 @@ function applyResult(qid,ok){
 function pickQuestion(){
   const all=practiceQuestions.filter(q=>!q.needsReview);
   if(!all.length)return null;
+  if(practiceMode==='review'){
+    const cand=all.filter(q=>taskIds.includes(q.id));
+    if(!cand.length)return null;
+    const avoid=new Set(sessionRecent.slice(-10));
+    let c2=cand.filter(q=>!avoid.has(q.id));
+    if(!c2.length)c2=cand;
+    return c2[Math.floor(Math.random()*c2.length)];
+  }
   const st=srsStore().qs,now=Date.now();
   const card=(qid)=>st[qid];
   const dueGood=all.filter(q=>{const c=card(q.id);return c&&c.due&&c.due<=now&&!c.wrongStreak});
@@ -81,16 +89,16 @@ function showView(v){
   $$('.view').forEach(x=>x.classList.remove('active-view'));const target=$(`#${v}-view`);if(target)target.classList.add('active-view');
   $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   $('#page-title').textContent=titles[v]||titles.home;
-  if(fromPractice&&v!=='practice')closeSession();
+  if(fromPractice&&v!=='practice'){closeSession();practiceMode='free';taskIds=[]}
   if(v==='wrong')renderReview();
-  if(v==='practice'){ensureSession();renderQuestion()}
+  if(v==='practice'){if(practiceMode==='reviewDone')practiceMode='free';ensureSession();renderQuestion()}
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank)selectBank(bank.dataset.bank)});
 function bankName(q){return q.source&&(/港澳台|文化史|古代文化|pdf/i.test(q.source))?'中华文化题库':q.source||'未命名题库'}
 function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]??=[]).push(q)});return m}
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
 function renderBanks(){const groups=bankGroups(),names=Object.keys(groups),h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">题库正在加载。</div>';$('#home-banks').innerHTML=h;$('#all-banks').innerHTML=h;$('#bank-count').textContent=names.length;$('#bank-count-all').textContent=names.length;if($('#bank-total'))$('#bank-total').textContent=questions.length}
-function selectBank(name){activeBank=name;const groups=bankGroups();practiceQuestions=(groups[name]||[]).filter(q=>!q.needsReview);sessionRecent=[];currentQ=null;renderQuestion();showView('practice');toast(`已选择：${name}`)}
+function selectBank(name){activeBank=name;const groups=bankGroups();practiceQuestions=(groups[name]||[]).filter(q=>!q.needsReview);sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];renderQuestion();showView('practice');toast(`已选择：${name}`)}
 function updateStats(){
   const ses=read('sessions'),todayK=dayKey();
   const total=ses.reduce((n,x)=>n+(x.qCount||0),0),right=ses.reduce((n,x)=>n+(x.correct||0),0);
@@ -100,6 +108,10 @@ function updateStats(){
   const label=user?`${user.user_metadata?.username||user.email||''} 的专属数据`:'（未登录，数据仅存本浏览器）';
   $('#user-data-label')&&($('#user-data-label').textContent=label);
   $('#due-count')&&($('#due-count').textContent=due);$('#weak-count')&&($('#weak-count').textContent=weak);$('#today-count')&&($('#today-count').textContent=today);
+  $('#review-due')&&($('#review-due').textContent=due);$('#review-weak')&&($('#review-weak').textContent=weak);
+  const rt=$('#start-review'),rdh=$('#review-done-hint');
+  if(rt){const has=due+weak>0;rt.hidden=!has;if(has)rt.disabled=false}
+  if(rdh)rdh.hidden=due+weak>0;
   const days=[...new Set(ses.map(x=>dayKey(x.start)))];
   let streak=0;const cur=new Date();if(!days.includes(dayKey(cur.getTime())))cur.setDate(cur.getDate()-1);
   while(days.includes(dayKey(cur.getTime()))){streak++;cur.setDate(cur.getDate()-1)}
@@ -118,17 +130,33 @@ function practiceMeta(label){
   for(const q of practiceQuestions){const c=s[q.id];if(!c){fresh++;continue}if(c.due&&c.due<=now){if(c.wrongStreak)failed++;else due++}else if(c.wrongStreak)failed++}
   return `${label} · 待复习 ${due} · 薄弱 ${failed} · 新题 ${fresh}`;
 }
+function renderReviewDone(){
+  $('#practice-card').innerHTML=`<div class="empty-state"><h3 style="margin:10px 0 8px;color:#7254df">🎉 今日复习完成</h3><p style="line-height:1.8">到期的复习题与薄弱题已全部处理完毕。明天再来巩固新一批，或继续自由刷题。</p><div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="outline" id="review-done-home">返回首页</button><button class="primary" id="review-done-free">继续自由刷题</button></div></div>`;
+  $('#review-done-home').onclick=()=>showView('home');
+  $('#review-done-free').onclick=()=>{practiceMode='free';ensureSession();renderQuestion()};
+}
+function startReview(){
+  const all=practiceQuestions.filter(q=>!q.needsReview);
+  if(!all.length){toast('题库尚未加载完成，请稍候');return}
+  const now=Date.now(),st=srsStore().qs;
+  const due=all.filter(q=>st[q.id]&&st[q.id].due&&st[q.id].due<=now);
+  if(!due.length){toast('当前没有到期的复习题，可先自由刷题，稍后再开始复习');practiceMode='free';taskIds=[];showView('practice');return}
+  practiceMode='review';taskIds=due.map(q=>q.id);taskTotal=taskIds.length;sessionRecent=[];
+  showView('practice');
+}
 function renderQuestion(){
+  if(practiceMode==='review'&&taskIds.length===0){renderReviewDone();return}
   currentQ=pickQuestion();
-  if(!currentQ){$('#practice-card').innerHTML=`<div class="empty-state">“${esc(activeBank)}”暂无题目可刷，请选择其他题库。</div>`;return}
+  if(!currentQ){if(practiceMode==='review'){renderReviewDone();return}$('#practice-card').innerHTML=`<div class="empty-state">“${esc(activeBank)}”暂无题目可刷，请选择其他题库。</div>`;return}
   const q=currentQ,multi=q.type==='multiple',fill=q.type==='fill',judge=q.type==='judge';
   const label=q.generatedOptions?'单选题 · 整理版选项':(fill?'填空题':multi?'多选题':judge?'判断题':'单选题');
-  if($('#practice-index'))$('#practice-index').textContent=practiceMeta(label);
+  if($('#practice-index'))$('#practice-index').textContent=practiceMode==='review'?`今日复习 · 剩余 ${taskIds.length} / ${taskTotal} 题`:practiceMeta(label);
   const todayCount=read('sessions').filter(x=>dayKey(x.start)===dayKey()).reduce((n,x)=>n+(x.qCount||0),0);
   const inSession=session?session.qCount:0;
-  if($('#practice-meter'))$('#practice-meter').style.width='100%';
-  if($('#aside-meter'))$('#aside-meter').style.width='100%';
-  if($('#aside-progress'))$('#aside-progress').textContent=`本场已刷 ${inSession} 题 · 今日 ${todayCount} 题 · 智能选题（遗忘曲线）`;
+  const ratio=practiceMode==='review'&&taskTotal?Math.max(0,Math.min(100,Math.round((taskTotal-taskIds.length+1)/taskTotal*100))):100;
+  if($('#practice-meter'))$('#practice-meter').style.width=`${ratio}%`;
+  if($('#aside-meter'))$('#aside-meter').style.width=`${ratio}%`;
+  if($('#aside-progress'))$('#aside-progress').textContent=practiceMode==='review'?`今日复习：已处理 ${taskTotal-taskIds.length} / ${taskTotal} 题 · 答错会回炉重练`: `本场已刷 ${inSession} 题 · 今日 ${todayCount} 题 · 智能选题（遗忘曲线）`;
   const meta=`<div class="question-meta"><span class="tag">${esc(activeBank)}</span><span>${practiceMeta(label)}</span></div>`;
   answered=false;
   if(fill){
@@ -207,6 +235,10 @@ function finishQuestion(ok,q){
   applyResult(q.id,ok);
   if(!ok){wrongListAdd(q)}else{wrongListRemove(q.id)}
   bumpSession(ok);updateStats();
+  if(practiceMode==='review'){
+    if(ok){taskIds=taskIds.filter(id=>id!==q.id)}else{taskIds=taskIds.filter(id=>id!==q.id);taskIds.push(q.id)}
+    if(taskIds.length===0){closeSession();practiceMode='reviewDone';renderReviewDone();return}
+  }
   if(user&&db){
     if(ok)db.from('wrong_questions').delete().eq('user_id',user.id).eq('question_id',q.id).then(()=>{}).catch(()=>{});
     else db.from('wrong_questions').upsert({user_id:user.id,question_id:q.id,question:q},{onConflict:'user_id,question_id'}).then(()=>{}).catch(()=>{});
@@ -301,6 +333,7 @@ async function handleAuthSubmit(){
 }
 window.addEventListener('pagehide',()=>{if(session)closeSession()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&session)closeSession()});
+$('#start-review')&&($('#start-review').onclick=startReview);
 $('#auth-submit').onclick=handleAuthSubmit;
 migrateLegacy();renderBanks();renderReview();updateStats();
 fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());
