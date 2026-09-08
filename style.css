@@ -163,3 +163,14 @@
 @media(min-width:1025px){
   .main{margin:0 auto;max-width:min(1160px,calc(100vw - 242px - 44px));padding:31px 20px 70px}
 }
+
+/* final: vertical on phones/tablets (portrait), side-by-side on desktop */
+@media(max-width:900px){
+  .home-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:620px){
+  .home-main .stats{grid-template-columns:1fr!important}
+}
+@media(min-width:901px){
+  .home-grid{grid-template-columns:1.05fr .95fr}
+}
