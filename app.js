@@ -812,3 +812,88 @@ function submitReading(){
   $('#rd-end').onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;showView('home');toast('已结束阅读练习')};
   updateStats();
 }
+
+/* ============ 阅读试卷 v2：整篇在上，全部小题同屏，一次提交 ============ */
+function matHtml(mat){
+  if(!mat)return '';
+  const parts=String(mat).split(/(?=[①②③④⑤⑥⑦⑧⑨⑩])/).filter(s=>s.trim());
+  return `<div class="reading-mat rd-mat">${parts.map(s=>`<p>${esc(s.trim())}</p>`).join('')}</div>`;
+}
+let rLastType=null;
+function choosePassKey(){
+  const groups=groupReadingQs();const keys=Object.keys(groups);
+  if(!keys.length)return null;
+  const toggle=practiceKind==='reading';
+  let pool=keys;
+  if(toggle&&rLastType){
+    const other=rLastType==='classical'?'modern':'classical';
+    const oth=keys.filter(k=>groups[k][0]&&groups[k][0].rType===other);
+    if(oth.length)pool=oth;
+  }
+  const avail=pool.filter(k=>!rRecent.includes(k));
+  const pick=(avail.length?avail:pool)[Math.floor(Math.random()*(avail.length?avail.length:pool.length))];
+  rLastType=groups[pick][0].rType;
+  return pick;
+}
+function drawReading(){
+  const groups=groupReadingQs();
+  const key=choosePassKey();
+  if(!key){$('#practice-card').innerHTML='<div class="empty-state">暂无阅读材料。</div>';return}
+  rRecent.push(key);if(rRecent.length>6)rRecent.shift();
+  const items=groups[key].map(q=>({q,sel:null}));
+  rCur={key,items};
+  qStart=Date.now();
+  if($('#practice-index'))$('#practice-index').textContent=`阅读理解 · ${key}`;
+  renderReadingSheet();
+}
+function renderReadingSheet(){
+  const p=rCur,key=p.key;
+  const first=p.items[0].q;
+  const {mat}=splitQ(first);
+  const body=p.items.map((it,i)=>{
+    const {sub}=splitQ(it.q);
+    const opts=(it.q.options||[]).map((o,j)=>{const L=String.fromCharCode(65+j);return `<button class="${it.sel===L?'selected':''}" data-l="${L}"><i>${L}</i> ${esc(o)}</button>`}).join('');
+    return `<div class="rd-qitem" data-i="${i}">
+      <div class="rd-qno">第 ${i+1} 题</div>
+      <div class="rd-qtext">${esc(sub)}</div>
+      <div class="options">${opts}</div>
+    </div>`;
+  }).join('');
+  const done=p.items.filter(x=>x.sel!=null).length,n=p.items.length;
+  $('#practice-card').innerHTML=`
+    <div class="question-meta"><span class="tag">${esc(activeBank)}</span><span class="q-badge ${first.rType==='modern'?'b-modern':'b-classical'}">阅读 · ${first.rType==='modern'?'白话文':'文言文'}</span><span class="q-timers">总用时 <b id="time-total">0:00</b></span></div>
+    <div class="rd-title">《${esc(key)}》<span class="rd-subinfo">${first.rType==='modern'?'白话文 · 整篇':'文言文'}</span></div>
+    ${matHtml(mat)}
+    <div class="rd-items">${body}</div>
+    <div class="rd-nav"><button class="primary" id="rd-submit" ${done<n?'disabled':''}>提交批改（${done}/${n}）</button></div>`;
+  const pick=(L,it)=>{it.sel=L;const done2=p.items.filter(x=>x.sel!=null).length;const sb=$('#rd-submit');if(sb){sb.disabled=done2<n;sb.textContent=`提交批改（${done2}/${n}）`}};
+  $$('#practice-card .rd-qitem').forEach((el)=>{
+    const idx=Number(el.dataset.i),it=p.items[idx];
+    el.querySelectorAll('.options button').forEach(b=>b.onclick=()=>{it.sel=b.dataset.l;el.querySelectorAll('.options button').forEach(x=>x.classList.toggle('selected',x===b));const done2=p.items.filter(y=>y.sel!=null).length;const sb=$('#rd-submit');if(sb){sb.disabled=done2<p.items.length;sb.textContent=`提交批改（${done2}/${p.items.length}）`}});
+  });
+  const sb=$('#rd-submit');
+  if(sb)sb.onclick=()=>{const un=p.items.filter(x=>x.sel==null).length;if(un>0){toast(`还有 ${un} 题未作答`);return}submitReading()};
+}
+function submitReading(){
+  const p=rCur;if(!p)return;
+  let okN=0;
+  p.items.forEach(it=>{const q=it.q,L=String(q.answer||'A').toUpperCase();const ok=it.sel===L;it.ok=ok;if(ok)okN++;recordReadingAnswer(q,ok,it.sel||'')});
+  const n=p.items.length,pct=Math.round(okN/n*100);
+  const rows=p.items.map((it,i)=>{
+    const q=it.q,{sub}=splitQ(q);
+    const showSel=it.sel?`${it.sel}. ${esc((q.options||[])[it.sel.charCodeAt(0)-65]||'')}`:'（未作答）';
+    const showAns=`${q.answer}. ${esc((q.options||[])[String(q.answer).charCodeAt(0)-65]||'')}`;
+    return `<div class="hist-q ${it.ok?'ok':'no'}"><div class="hq-head"><b>第 ${i+1} 题</b><span class="hq-res">${it.ok?'答对 ✓':'答错 ✗'}</span></div><div class="hq-q">${esc(sub)}</div><div class="hq-ans">你的选择：${showSel} ｜ 正确答案：${showAns}</div>${explainHtml(q)}</div>`;
+  }).join('');
+  const itemsEl=$('#rd-items')?$('#rd-items'):null;
+  // keep material & title; replace question list with results
+  const listWrap=document.querySelector('.rd-items,.rd-nav');
+  if(listWrap){
+    const holder=document.createElement('div');holder.className='rd-result';
+    holder.innerHTML=`<div class="rd-result-head"><div><b>《${esc(p.key)}》批改结果</b><span>答对 ${okN}/${n} · 正确率 ${pct}%</span></div></div>${rows}<div class="rd-nav"><button class="primary" id="rd-again">${practiceKind==='reading'?'再做一篇（自动切换文体）→':'再做一篇 →'}</button><button class="outline" id="rd-end">结束练习</button></div>`;
+    listWrap.replaceWith(holder);
+  }
+  const again=$('#rd-again');if(again)again.onclick=()=>renderReadingPass();
+  const end=$('#rd-end');if(end)end.onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;showView('home');toast('已结束阅读练习')};
+  updateStats();
+}

@@ -201,3 +201,15 @@
 .rd-nav{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
 .rd-nav button:disabled{opacity:.45;cursor:not-allowed}
 .rd-result-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.rd-result-head b{font-size:17px}.rd-result-head span{font-size:12px;color:#8e8a9f;display:block;margin-top:4px}
+
+/* reading sheet v2 */
+.rd-title{font-size:20px;font-weight:800;margin:16px 0 6px;color:#201b33}
+.rd-subinfo{font-size:12px;color:#8e8a9f;font-weight:400;margin-left:10px}
+.rd-mat{max-height:40vh;overflow:auto;border:1px solid #e8e0f8;background:#faf9ff;border-radius:10px;padding:14px 18px;margin:10px 0 18px}
+.rd-mat p{margin:0 0 0.6em;font-size:16px;line-height:2;color:#3d3852;text-indent:2em;white-space:pre-wrap}
+.rd-items{margin-top:6px}
+.rd-qitem{border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px;background:#fff}
+.rd-qno{font-size:12px;color:var(--purple);font-weight:700;margin-bottom:8px}
+.rd-qtext{font-size:16px;line-height:1.9;color:#201b33;margin-bottom:12px}
+.rd-result{margin-top:10px}
+.rd-result-head{margin:10px 0 12px}.rd-result-head b{font-size:18px}.rd-result-head span{font-size:13px;color:#8e8a9f;display:block;margin-top:4px}
