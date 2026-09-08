@@ -1,0 +1,9 @@
+.auth-panel input{position:relative;z-index:2;background:#fff;color:var(--ink);pointer-events:auto}
+.auth-panel input[hidden]{display:none}
+.auth-panel input:focus{outline:2px solid #7254df55;border-color:var(--purple)}
+.google-auth{width:100%;background:#fff;border:1px solid #dedbe6;border-radius:8px;padding:11px 14px;margin:10px 0 14px;font-size:12px;font-weight:600}
+.google-auth:hover{background:#faf9ff;border-color:#b8ace9}
+.google-auth span{display:inline-grid;place-items:center;width:21px;height:21px;margin-right:8px;border-radius:50%;color:#4285f4;font-weight:800}
+.auth-divider{display:flex;align-items:center;gap:10px;color:#aaa5b3;font-size:10px;margin:4px 0 8px}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;background:var(--line);flex:1}
+.file-warning{margin:-18px 0 22px;padding:11px 14px;border-radius:8px;background:#fff5e8;color:#a86f25;font-size:12px}

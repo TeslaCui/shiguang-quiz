@@ -1,0 +1,10 @@
+{
+  "name": "拾光题库 · 智能刷题",
+  "short_name": "拾光题库",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fbfafc",
+  "theme_color": "#7254df",
+  "lang": "zh-CN",
+  "icons": []
+}
