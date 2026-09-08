@@ -73,7 +73,10 @@ function pickQuestion(){
   let pool;
   if(dueGood.length)pool=dueGood;
   else if(dueBad.length)pool=dueBad;
-  else if(fresh.length)pool=fresh;
+  else if(fresh.length){
+    const coreFresh=fresh.filter(q=>q.priority===1);
+    pool=coreFresh.length?coreFresh:fresh; // 冲刺重点(priority=1)新题优先
+  }
   else{
     const weak=all.filter(q=>{const c=card(q.id);return c&&c.wrongStreak}).sort((a,b)=>(card(a.id).due||0)-(card(b.id).due||0));
     if(weak.length)pool=weak.slice(0,40);
@@ -112,6 +115,8 @@ function updateStats(){
   const rt=$('#start-review'),rdh=$('#review-done-hint');
   if(rt){const has=due+weak>0;rt.hidden=!has;if(has)rt.disabled=false}
   if(rdh)rdh.hidden=due+weak>0;
+  const coreTotal=practiceQuestions.filter(q=>q.priority===1).length;
+  $('#core-count')&&($('#core-count').textContent=coreTotal);
   const days=[...new Set(ses.map(x=>dayKey(x.start)))];
   let streak=0;const cur=new Date();if(!days.includes(dayKey(cur.getTime())))cur.setDate(cur.getDate()-1);
   while(days.includes(dayKey(cur.getTime()))){streak++;cur.setDate(cur.getDate()-1)}

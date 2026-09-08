@@ -16,6 +16,7 @@ for (const f of extraFiles) {
   const arr = JSON.parse(await fs.readFile(f, "utf8"));
   for (const q of arr) {
     q.id = `教材-${extra.length + 1}`;
+    q.priority = 1; // textbook/押题一律作为冲刺重点
     extra.push(q);
   }
 }
