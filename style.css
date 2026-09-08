@@ -176,3 +176,10 @@
 }
 
 .ver-line{font-size:10px;color:#aaa5b3;padding:8px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}.ver-line b{color:#8a84b0}.ver-new{color:#df8065;font-weight:700}
+
+/* mobile: calendar first, then practice/info block */
+@media(max-width:900px){
+  .home-grid{display:flex;flex-direction:column}
+  .cal-card{order:-1!important}
+  .home-main{order:0}
+}
