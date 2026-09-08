@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const SUPABASE_URL='https://wcnmufiabeftlsregamh.supabase.co',SUPABASE_KEY='sb_publishable_FHlEZrROrCVM1WLdoij5Cw_7Ue64M1X';
 const db=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'shiguang-quiz-auth'}});
-let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0,practiceCat='all';
+let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0,practiceKind='choice',practiceArmed=false;
 const titles={home:'总览',bank:'我的题库',practice:'开始刷题',wrong:'错题本'};
 // ---------- per-user namespaced local storage ----------
 const NS=()=>user?.id||'anon';
@@ -92,16 +92,54 @@ function showView(v){
   $$('.view').forEach(x=>x.classList.remove('active-view'));const target=$(`#${v}-view`);if(target)target.classList.add('active-view');
   $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   $('#page-title').textContent=titles[v]||titles.home;
-  if(fromPractice&&v!=='practice'){closeSession();practiceMode='free';taskIds=[]}
+  if(fromPractice&&v!=='practice'){closeSession();practiceMode='free';taskIds=[];practiceArmed=false}
   if(v==='wrong')renderReview();
-  if(v==='practice'){if(practiceMode==='reviewDone')practiceMode='free';ensureSession();renderQuestion()}
+  if(v==='practice'){if(practiceMode==='reviewDone')practiceMode='free';if(practiceArmed)renderQuestion();else renderSetup()}
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank)selectBank(bank.dataset.bank)});
 function bankName(q){return q.source&&(/港澳台|文化史|古代文化|pdf|阅读/i.test(q.source))?'中华文化题库':q.source||'未命名题库'}
 function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]??=[]).push(q)});return m}
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
 function renderBanks(){const groups=bankGroups(),names=Object.keys(groups),h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">题库正在加载。</div>';$('#home-banks').innerHTML=h;$('#all-banks').innerHTML=h;$('#bank-count').textContent=names.length;$('#bank-count-all').textContent=names.length;if($('#bank-total'))$('#bank-total').textContent=questions.length}
-const catOf=(q)=>q.source&&q.source.includes('阅读题')?'reading':'choice';
+const kindOf=(q)=>{
+  if(q.rType==='classical')return 'classical';
+  if(q.rType==='modern')return 'modern';
+  if(q.source&&q.source.includes('阅读题'))return 'reading';
+  return 'choice';
+};
+const KIND_LABEL={all:'全部混合',choice:'选择·填空',reading:'阅读·全部',classical:'阅读·文言文',modern:'阅读·白话文'};
+function renderSetup(msg){
+  practiceMode='free';taskIds=[];sessionRecent=[];currentQ=null;practiceArmed=false;
+  const groups=bankGroups();
+  const banks=Object.keys(groups);
+  const btns=banks.map(n=>`<button class="setup-bank ${n===activeBank?'sel':''}" data-bank2="${esc(n)}"><b>${esc(n)}</b><small>${groups[n].filter(q=>!q.needsReview).length} 题</small></button>`).join('');
+  const kinds=[
+    ['choice','选择·填空','单选/多选/判断/填空'],
+    ['classical','阅读 · 文言文','《劝学》《论语》等文言理解'],
+    ['modern','阅读 · 白话文','现当代文化散文理解'],
+    ['reading','阅读 · 全部','文言文 + 白话文'],
+    ['all','全部混合','所有题目随机'],
+  ].map(([k,lab,desc])=>`<button class="setup-kind ${practiceKind===k?'sel':''}" data-kind="${k}"><b>${lab}</b><small>${desc}</small></button>`).join('');
+  $('#practice-card').innerHTML=`<div class="setup-wrap">
+    <div class="setup-title">开始刷题</div>
+    <div class="setup-step"><div class="ss-name">1 · 选择题库</div><div class="setup-banks">${btns||'<div class="empty-state">暂无题库</div>'}</div></div>
+    <div class="setup-step"><div class="ss-name">2 · 选择题型</div><div class="setup-kinds">${kinds}</div></div>
+    <button class="primary" id="setup-go">开始刷题 →</button>
+    ${msg?`<div class="setup-msg">${esc(msg)}</div>`:''}
+  </div>`;
+  $$('#practice-card .setup-bank').forEach(b=>b.onclick=()=>{activeBank=b.dataset.bank2;$$('#practice-card .setup-bank').forEach(x=>x.classList.toggle('sel',x===b));renderBanks();});
+  $$('#practice-card .setup-kind').forEach(b=>b.onclick=()=>{practiceKind=b.dataset.kind;$$('#practice-card .setup-kind').forEach(x=>x.classList.toggle('sel',x===b));});
+  $('#setup-go').onclick=()=>startPractice();
+  if($('#practice-index'))$('#practice-index').textContent='准备开始';
+  if($('#aside-progress'))$('#aside-progress').textContent='选择题库与题型后开始';
+}
+function startPractice(){
+  closeSession();practiceArmed=true;sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];
+  practiceQuestions=bankQuestions(activeBank);
+  if(!practiceQuestions.length){practiceArmed=false;renderSetup(`“${activeBank}”中没有“${KIND_LABEL[practiceKind]}”类题目，请调整选择`);return}
+  ensureSession();renderQuestion();updateStats();
+  toast(`开始：${activeBank} · ${KIND_LABEL[practiceKind]}`);
+}
 function questionHtml(q){
   const t=q.question||'';
   const i=t.indexOf('【阅读材料】'),j=t.indexOf('【小题】');
@@ -126,16 +164,15 @@ function explainHtml(q){
   parts.push(`<b>文化知识补充</b> ${esc(cult)}`);
   return parts.join('<br>');
 }
-function bankQuestions(name){const groups=bankGroups();return (groups[name]||[]).filter(q=>!q.needsReview&&(practiceCat==='all'||catOf(q)===practiceCat))}
-function setCat(cat){
-  if(cat===practiceCat)return;
-  practiceCat=cat;closeSession();practiceMode='free';taskIds=[];sessionRecent=[];currentQ=null;
-  practiceQuestions=bankQuestions(activeBank);
-  $$('.mode-chips button').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
-  ensureSession();renderQuestion();updateStats();
-  toast(cat==='reading'?'已切换：阅读理解题':cat==='choice'?'已切换：常识选择题':'已切换：全部题目');
+function kindMatch(q){
+  const k=kindOf(q);
+  if(practiceKind==='all')return true;
+  if(practiceKind==='choice')return k==='choice';
+  if(practiceKind==='reading')return k==='reading'||k==='classical'||k==='modern';
+  return k===practiceKind;
 }
-function selectBank(name){activeBank=name;practiceQuestions=bankQuestions(name);sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];renderQuestion();showView('practice');toast(`已选择：${name}`)}
+function bankQuestions(name){const groups=bankGroups();return (groups[name]||[]).filter(q=>!q.needsReview&&kindMatch(q))}
+function selectBank(name){activeBank=name;practiceArmed=false;practiceQuestions=bankQuestions(name);closeSession();renderBanks();showView('practice')}
 function updateStats(){
   const ses=read('sessions'),todayK=dayKey();
   const total=ses.reduce((n,x)=>n+(x.qCount||0),0),right=ses.reduce((n,x)=>n+(x.correct||0),0);
@@ -157,12 +194,68 @@ function updateStats(){
   $('#streak-count')&&($('#streak-count').textContent=streak);$('#checkin-count')&&($('#checkin-count').textContent=days.length);
   const fmt=(x)=>`<div class="recent-row"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
   $('#recent-list').innerHTML=ses.length?ses.slice(-5).reverse().map(fmt).join(''):'<div class="empty-state">还没有练习记录，开始第一题吧。</div>';
+  renderAnalysis();
+}
+function renderAnalysis(){
+  const area=$('#analysis-area');if(!area)return;
+  const d=read('details');
+  if(!d.length){area.innerHTML='<div class="empty-state">完成几次练习后，这里会实时显示你的学习程度与薄弱点。</div>';return}
+  const dayBars=[];let max=0;
+  for(let i=6;i>=0;i--){
+    const dt=new Date();dt.setDate(dt.getDate()-i);
+    const k=dayKey(dt.getTime()),items=d.filter(x=>dayKey(x.ts)===k);
+    max=Math.max(max,items.length);
+    dayBars.push({k,items});
+  }
+  const trend=dayBars.map(x=>{
+    const tot=x.items.length,ok=x.items.filter(y=>y.ok).length;
+    const hp=Math.max(0,Math.round(ok/tot*100));
+    const tp=Math.max(4,Math.round(tot/max*100));
+    return `<div class="tcol" title="${x.k}：${ok}/${tot} 对"><div class="tbar" style="height:${tp}%"><i class="ok" style="height:${hp}%"></i></div><span class="d">${x.k.slice(5)}</span><span class="n">${tot}</span></div>`;
+  }).join('');
+  const map={single:'单选',multiple:'多选',judge:'判断',fill:'填空'};
+  const by={};
+  d.forEach(x=>{
+    const key=x.kind==='classical'?'阅读·文言':x.kind==='modern'?'阅读·白话':x.kind==='reading'?'阅读':(map[x.type]||'其他');
+    by[key]=by[key]||{ok:0,total:0};by[key].total++;if(x.ok)by[key].ok++;
+  });
+  const typeRows=Object.entries(by).map(([k,v])=>{const p=Math.round(v.ok/v.total*100);return `<div class="acc-row"><span>${k}</span><div class="acc-bar"><i style="width:${p}%"></i></div><b>${p}%</b><em>${v.ok}/${v.total}</em></div>`}).join('');
+  const weak=Object.entries(by).filter(([,v])=>v.total>=3).sort((a,b)=>(a[1].ok/a[1].total)-(b[1].ok/b[1].total)).slice(0,3);
+  const weakBlocks=weak.map(([k,v])=>{const p=Math.round(v.ok/v.total*100);return `<div class="weak">${k}：正确率 ${p}%（${v.ok}/${v.total}）${p<=75?'⚠ 建议优先复习':''}</div>`}).join('')||'<div class="weak good">暂无明显薄弱题型</div>';
+  const cnt={};d.forEach(x=>{if(!x.ok)cnt[x.qid]=(cnt[x.qid]||0)+1});
+  const repeat=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,2);
+  const repeatBlocks=repeat.map(([id,n])=>{const q=questions.find(qq=>qq.id===id);return `<div class="weak">反复答错 · ${esc(shortQ(q?q.question:id))}（${n} 次）</div>`}).join('');
+  area.innerHTML=`<div class="ana-grid">
+    <div class="ana-card"><div class="ana-title">近 7 日练习趋势（绿=答对占比）</div><div class="trend-bars">${trend}</div></div>
+    <div class="ana-card"><div class="ana-title">分题型正确率</div>${typeRows||'<div class="weak">暂无数据</div>'}</div>
+    <div class="ana-card"><div class="ana-title">薄弱点提醒</div>${weakBlocks}${repeatBlocks}</div>
+  </div>`;
 }
 function renderReview(){
   const w=read('wrong-questions'),ses=read('sessions');
   $('#wrong-list').innerHTML=w.length?w.slice().reverse().map(q=>`<div class="recent-row"><span class="mini-icon pink">⚑</span><div><b>${esc(shortQ(q.question))}</b><small>答案：${q.answer||'见题目'} · ${q.explanation||'暂无解析'}</small></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
-  const fmt=(x)=>`<div class="recent-row"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
+  const fmt=(x)=>`<div class="recent-row"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><button class="hist-detail-btn" data-start="${x.start}">逐题明细</button></div>`;
   $('#history-list').innerHTML=ses.length?ses.slice().reverse().map(fmt).join(''):'<div class="empty-state">完成一次练习后，这里会显示记录。</div>';
+  $$('#history-list [data-start]').forEach(b=>b.onclick=()=>renderHistoryDetail(b.dataset.start));
+}
+function renderHistoryDetail(startStr){
+  const area=$('#history-detail');if(!area)return;
+  const items=read('details').filter(x=>x.start===Number(startStr));
+  if(!items.length){area.innerHTML='<div class="empty-state">该场暂无逐题明细（早期记录不含明细）。</div>';return}
+  const TYPE={single:'单选',multiple:'多选',judge:'判断',fill:'填空'};
+  const chosenText=(x)=>{
+    const ch=x.chosen||'';
+    if(!ch)return x.ok?'（自评：正确）':'（自评：错误）';
+    return [...ch].map(l=>{const idx=l.charCodeAt(0)-65;const o=(x.opts&&x.opts[idx])?shortQ(x.opts[idx]):'';return `${l}${o?' '+o:''}`}).join('；');
+  };
+  let prev=0;
+  const rows=items.map((x,i)=>{
+    const dur=i&&x.ts>prev?Math.max(1,Math.round((x.ts-prev)/1000))+'s':'';
+    prev=x.ts;
+    return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE[x.type]||'题'}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur">${dur}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
+  }).join('');
+  area.innerHTML=`<div class="hist-detail-head"><b>本场逐题明细（${items.length} 题 · 用时按相邻作答估算）</b><button class="outline" id="hist-detail-close">收起</button></div>${rows}`;
+  $('#hist-detail-close').onclick=()=>{area.innerHTML=''};
 }
 function practiceMeta(label){
   const s=srsStore().qs,now=Date.now();let due=0,failed=0,fresh=0;
@@ -236,19 +329,28 @@ async function answer(btn,q,fill){
   if(answered)return;answered=true;
   const exp=String(q.answer||'A').toUpperCase();
   const multi=q.type==='multiple';
-  let ok=false;
+  let ok=false,chosenTxt='';
   if(multi){
     const picks=$$('.options button.selected').map(b=>String.fromCharCode(65+Number(b.dataset.i))).sort().join('');
     ok=!!picks&&picks===exp.split('').sort().join('');
+    chosenTxt=picks;
   }else{
     const pick=String.fromCharCode(65+Number(btn.dataset.i));
     ok=exp.includes(pick);
+    chosenTxt=pick;
   }
-  finishQuestion(ok,q);
+  finishQuestion(ok,q,chosenTxt);
 }
 function wrongListAdd(q){const w=read('wrong-questions');if(!w.some(x=>x.id===q.id))w.push(q);write('wrong-questions',w)}
 function wrongListRemove(qid){write('wrong-questions',read('wrong-questions').filter(x=>x.id!==qid))}
-function finishQuestion(ok,q){
+function recordAnswer(q,ok,chosen){
+  ensureSession();
+  const d=read('details');
+  d.push({start:session.start,qid:q.id,type:q.type,q:(q.question||'').slice(0,500),ans:q.answer||'',chosen:chosen||'',kind:kindOf(q),ok:!!ok,ts:Date.now()});
+  if(d.length>5000)d.splice(0,d.length-5000);
+  write('details',d);
+}
+function finishQuestion(ok,q,chosen){
   const multi=q.type==='multiple';
   const exp=String(q.answer||'A').toUpperCase();
   const expLetters=exp.split('');
@@ -270,7 +372,7 @@ function finishQuestion(ok,q){
   // spaced repetition update
   applyResult(q.id,ok);
   if(!ok){wrongListAdd(q)}else{wrongListRemove(q.id)}
-  bumpSession(ok);updateStats();
+  bumpSession(ok);recordAnswer(q,ok,chosen);updateStats();
   if(practiceMode==='review'){
     if(ok){taskIds=taskIds.filter(id=>id!==q.id)}else{taskIds=taskIds.filter(id=>id!==q.id);taskIds.push(q.id)}
     if(taskIds.length===0){closeSession();practiceMode='reviewDone';renderReviewDone();return}
@@ -370,7 +472,6 @@ async function handleAuthSubmit(){
 window.addEventListener('pagehide',()=>{if(session)closeSession()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&session)closeSession()});
 $('#start-review')&&($('#start-review').onclick=startReview);
-$$('.mode-chips button').forEach(b=>b.onclick=()=>setCat(b.dataset.cat));
 $('#auth-submit').onclick=handleAuthSubmit;
 migrateLegacy();renderBanks();renderReview();updateStats();
 fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());
