@@ -117,6 +117,23 @@ const kindOf=(q)=>{
   return 'choice';
 };
 const KIND_LABEL={all:'全部混合',choice:'选择·填空',reading:'阅读·全部',classical:'阅读·文言文',modern:'阅读·白话文'};
+function qLimit(q){
+  if(q.rType==='modern')return 150;
+  if(q.rType==='classical')return 120;
+  if(q.source&&q.source.includes('阅读题'))return 120;
+  return ({single:30,multiple:45,judge:25,fill:40}[q.type]||40);
+}
+function badgeFor(q){
+  if(q.rType==='classical')return ['文言阅读','b-classical'];
+  if(q.rType==='modern')return ['白话阅读','b-modern'];
+  if(q.source&&q.source.includes('阅读题'))return ['阅读理解','b-reading'];
+  return ({single:['单选题','b-single'],multiple:['多选题','b-multi'],judge:['判断题','b-judge'],fill:['填空题','b-fill']}[q.type]||['题目','b-single']);
+}
+function paintTimeOver(){
+  const el=$('#time-q');if(!el)return;
+  const over=session&&qStart&&currentQ?(Date.now()-qStart)/1000>qLimit(currentQ):false;
+  el.classList.toggle('over',over);
+}
 function renderSetup(msg){
   practiceMode='free';taskIds=[];sessionRecent=[];currentQ=null;practiceArmed=false;
   const groups=bankGroups();
@@ -257,14 +274,21 @@ function renderHistoryDetail(startStr){
     if(!ch)return x.ok?'（自评：正确）':'（自评：错误）';
     return [...ch].map(l=>{const idx=l.charCodeAt(0)-65;const o=(x.opts&&x.opts[idx])?shortQ(x.opts[idx]):'';return `${l}${o?' '+o:''}`}).join('；');
   };
-  let prev=0;
   const rows=items.map((x,i)=>{
-    const dur=i&&x.ts>prev?Math.max(1,Math.round((x.ts-prev)/1000))+'s':'';
-    prev=x.ts;
-    return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE[x.type]||'题'}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur">${dur}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
+    const durMs=x.durMs??(i===0?(x.start?(x.ts-x.start):0):(x.ts-items[i-1].ts));
+    const sec=Math.max(0,Math.round((durMs||0)/1000));
+    const lim=qLimitOf(x);
+    const over=sec>lim;
+    return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE[x.type]||'题'}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur ${over?'over-time':''}">用时 ${fmtClock(sec)}${over?'（超时）':''}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
   }).join('');
-  area.innerHTML=`<div class="hist-detail-head"><b>本场逐题明细（${items.length} 题 · 用时按相邻作答估算）</b><button class="outline" id="hist-detail-close">收起</button></div>${rows}`;
+  area.innerHTML=`<div class="hist-detail-head"><b>本场逐题明细（${items.length} 题）</b><button class="outline" id="hist-detail-close">收起</button></div>${rows}`;
   $('#hist-detail-close').onclick=()=>{area.innerHTML=''};
+}
+function qLimitOf(o){
+  if(o&&o.kind==='modern')return 150;
+  if(o&&o.kind==='classical')return 120;
+  if(o&&o.kind==='reading')return 120;
+  return ({single:30,multiple:45,judge:25,fill:40}[o&&o.type]||40);
 }
 function practiceMeta(label){
   const s=srsStore().qs,now=Date.now();let due=0,failed=0,fresh=0;
@@ -301,7 +325,9 @@ function renderQuestion(){
   if($('#practice-meter'))$('#practice-meter').style.width=`${ratio}%`;
   if($('#aside-meter'))$('#aside-meter').style.width=`${ratio}%`;
   if($('#aside-progress'))$('#aside-progress').textContent=practiceMode==='review'?`今日复习：已处理 ${taskTotal-taskIds.length} / ${taskTotal} 题 · 答错会回炉重练`: `本场已刷 ${inSession} 题 · 今日 ${todayCount} 题 · 智能选题（遗忘曲线）`;
-  const meta=`<div class="question-meta"><span class="tag">${esc(activeBank)}</span><span>${practiceMeta(label)}</span><span class="q-timers">⏱ 总 <b id="time-total">0:00</b> · 本题 <b id="time-q">0:00</b></span></div>`;
+  const [btext,bcls]=badgeFor(q);
+  const multiTip=q.type==='multiple'?'（多选：勾选全部正确项后再提交）':'';
+  const meta=`<div class="question-meta"><span class="tag">${esc(activeBank)}</span><span class="q-badge ${bcls}">${btext}${multiTip}</span><span class="q-timers">总用时 <b id="time-total">0:00</b> · 本题 <b id="time-q">0:00</b></span></div>`;
   answered=false;
   if(fill){
     $('#practice-card').innerHTML=meta+questionHtml(q)+`      <div class="answer-tip" id="answer-tip"></div>
@@ -357,8 +383,8 @@ function wrongListAdd(q){const w=read('wrong-questions');if(!w.some(x=>x.id===q.
 function wrongListRemove(qid){write('wrong-questions',read('wrong-questions').filter(x=>x.id!==qid))}
 function recordAnswer(q,ok,chosen){
   ensureSession();
-  const d=read('details');
-  d.push({start:session.start,qid:q.id,type:q.type,q:(q.question||'').slice(0,500),ans:q.answer||'',chosen:chosen||'',kind:kindOf(q),ok:!!ok,ts:Date.now()});
+  const d=read('details');const now=Date.now();
+  d.push({start:session.start,qid:q.id,type:q.type,q:(q.question||'').slice(0,500),ans:q.answer||'',chosen:chosen||'',kind:kindOf(q),ok:!!ok,ts:now,durMs:qStart?Math.max(0,now-qStart):0});
   if(d.length>5000)d.splice(0,d.length-5000);
   write('details',d);
 }
@@ -384,7 +410,7 @@ function finishQuestion(ok,q,chosen){
   // spaced repetition update
   applyResult(q.id,ok);
   if(!ok){wrongListAdd(q)}else{wrongListRemove(q.id)}
-  bumpSession(ok);recordAnswer(q,ok,chosen);updateStats();
+  bumpSession(ok);recordAnswer(q,ok,chosen);paintTimeOver();updateStats();
   if(practiceMode==='review'){
     if(ok){taskIds=taskIds.filter(id=>id!==q.id)}else{taskIds=taskIds.filter(id=>id!==q.id);taskIds.push(q.id)}
     if(taskIds.length===0){closeSession();practiceMode='reviewDone';renderReviewDone();return}
@@ -587,11 +613,12 @@ $('#main-go')&&($('#main-go').onclick=()=>{practiceArmed=false;showView('practic
 function goStart(){practiceArmed=false;showView('practice')}
 $('#help-open')&&($('#help-open').onclick=()=>{$('#help-modal').hidden=false});
 $('#help-close')&&($('#help-close').onclick=()=>{$('#help-modal').hidden=true});
+$('#practice-exit')&&($('#practice-exit').onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;currentQ=null;sessionRecent=[];showView('home');toast('已退出，本场练习已记录')});
 let qStart=0;
 function fmtClock(sec){sec=Math.max(0,Math.floor(sec||0));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 function updateTimers(){
   if($('#time-total')&&session)$('#time-total').textContent=fmtClock((Date.now()-session.start)/1000);
-  if($('#time-q')&&!answered&&qStart)$('#time-q').textContent=fmtClock((Date.now()-qStart)/1000);
+  if($('#time-q')&&!answered&&qStart){const el=$('#time-q');el.textContent=fmtClock((Date.now()-qStart)/1000);paintTimeOver()}
 }
 setInterval(updateTimers,1000);
 function openHistoryDetail(st){
