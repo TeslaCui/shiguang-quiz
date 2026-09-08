@@ -722,10 +722,15 @@ function splitQ(q){
   }
   return {mat:'',sub:t,no:1};
 }
+function gidOf(q){
+  if(q.group&&q.group!=='未分组'&&q.group!=='')return q.group;
+  const m=splitQ(q).mat||q.question||'';
+  return m.slice(0,24);
+}
 function groupReadingQs(){
   const map={};
-  practiceQuestions.forEach(q=>{if(!isReadingKind(kindOf(q)))return;const g=q.group||'未分组'; (map[g]=map[g]||[]).push(q)});
-  Object.values(map).forEach(arr=>arr.sort((a,b)=>splitQ(a).no-splitQ(b).no));
+  practiceQuestions.forEach(q=>{if(!isReadingKind(kindOf(q)))return;const g=gidOf(q); (map[g]=map[g]||[]).push(q)});
+  Object.values(map).forEach(arr=>{arr.sort((a,b)=>splitQ(a).no-splitQ(b).no);if(arr.length>5)arr.splice(5)});
   return map;
 }
 let rCur=null,rRecent=[];
