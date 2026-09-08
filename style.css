@@ -6,3 +6,5 @@
 .smart-strip{display:flex;gap:22px;align-items:center;font-size:11px;color:#8e8a9f;margin:18px 2px 14px;flex-wrap:wrap}.smart-strip .who{color:#7254df;font-weight:600;margin-right:auto}.smart-strip b{color:#7254df;font-weight:700}
 
 .review-task{display:flex;align-items:center;gap:18px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px 18px;margin:0 0 16px;flex-wrap:wrap}.review-task .rt-info{flex:1;min-width:220px}.review-task .rt-info b{color:var(--ink);font-size:15px}.review-task .rt-info span{display:block;font-size:10px;color:#aaa5b3;margin-top:3px}.review-task b{color:#7254df}.rt-done{font-size:12px;color:#58a879;font-weight:600}
+
+.mode-chips{margin:-10px 0 20px;display:flex;gap:8px}

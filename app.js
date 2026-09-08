@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const SUPABASE_URL='https://wcnmufiabeftlsregamh.supabase.co',SUPABASE_KEY='sb_publishable_FHlEZrROrCVM1WLdoij5Cw_7Ue64M1X';
 const db=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'shiguang-quiz-auth'}});
-let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0;
+let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0,practiceCat='all';
 const titles={home:'总览',bank:'我的题库',practice:'开始刷题',wrong:'错题本'};
 // ---------- per-user namespaced local storage ----------
 const NS=()=>user?.id||'anon';
@@ -101,7 +101,17 @@ function bankName(q){return q.source&&(/港澳台|文化史|古代文化|pdf|阅
 function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]??=[]).push(q)});return m}
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
 function renderBanks(){const groups=bankGroups(),names=Object.keys(groups),h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">题库正在加载。</div>';$('#home-banks').innerHTML=h;$('#all-banks').innerHTML=h;$('#bank-count').textContent=names.length;$('#bank-count-all').textContent=names.length;if($('#bank-total'))$('#bank-total').textContent=questions.length}
-function selectBank(name){activeBank=name;const groups=bankGroups();practiceQuestions=(groups[name]||[]).filter(q=>!q.needsReview);sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];renderQuestion();showView('practice');toast(`已选择：${name}`)}
+const catOf=(q)=>q.source&&q.source.includes('阅读题')?'reading':'choice';
+function bankQuestions(name){const groups=bankGroups();return (groups[name]||[]).filter(q=>!q.needsReview&&(practiceCat==='all'||catOf(q)===practiceCat))}
+function setCat(cat){
+  if(cat===practiceCat)return;
+  practiceCat=cat;closeSession();practiceMode='free';taskIds=[];sessionRecent=[];currentQ=null;
+  practiceQuestions=bankQuestions(activeBank);
+  $$('.mode-chips button').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));
+  ensureSession();renderQuestion();updateStats();
+  toast(cat==='reading'?'已切换：阅读理解题':cat==='choice'?'已切换：常识选择题':'已切换：全部题目');
+}
+function selectBank(name){activeBank=name;practiceQuestions=bankQuestions(name);sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];renderQuestion();showView('practice');toast(`已选择：${name}`)}
 function updateStats(){
   const ses=read('sessions'),todayK=dayKey();
   const total=ses.reduce((n,x)=>n+(x.qCount||0),0),right=ses.reduce((n,x)=>n+(x.correct||0),0);
@@ -339,6 +349,7 @@ async function handleAuthSubmit(){
 window.addEventListener('pagehide',()=>{if(session)closeSession()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&session)closeSession()});
 $('#start-review')&&($('#start-review').onclick=startReview);
+$$('.mode-chips button').forEach(b=>b.onclick=()=>setCat(b.dataset.cat));
 $('#auth-submit').onclick=handleAuthSubmit;
 migrateLegacy();renderBanks();renderReview();updateStats();
 fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());
