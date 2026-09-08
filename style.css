@@ -193,3 +193,11 @@
 @media(min-width:1025px){
   .home-grid{display:grid!important;grid-template-columns:1.05fr .95fr!important}
 }
+
+/* reading passage view */
+.rd-title{font-size:18px;font-weight:700;margin:16px 0 8px}.rd-subinfo{font-size:11px;color:#aaa5b3;font-weight:400;margin-left:8px}
+.rd-mat{max-height:280px;overflow:auto;margin-bottom:16px}
+.rd-q .rd-no{font-size:11px;color:#8e8a9f;margin-bottom:8px}
+.rd-nav{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.rd-nav button:disabled{opacity:.45;cursor:not-allowed}
+.rd-result-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.rd-result-head b{font-size:17px}.rd-result-head span{font-size:12px;color:#8e8a9f;display:block;margin-top:4px}

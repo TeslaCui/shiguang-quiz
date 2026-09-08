@@ -163,7 +163,9 @@ function startPractice(){
   closeSession();practiceArmed=true;sessionRecent=[];currentQ=null;practiceMode='free';taskIds=[];
   practiceQuestions=bankQuestions(activeBank);
   if(!practiceQuestions.length){practiceArmed=false;renderSetup(`“${activeBank}”中没有“${KIND_LABEL[practiceKind]}”类题目，请调整选择`);return}
-  ensureSession();renderQuestion();updateStats();
+  ensureSession();updateStats();
+  if(isReadingKind(practiceKind))renderReadingPass();
+  else renderQuestion();
   toast(`开始：${activeBank} · ${KIND_LABEL[practiceKind]}`);
 }
 function questionHtml(q){
@@ -707,4 +709,106 @@ updateAuth();renderCalendar();renderAccountPanel();syncAuthButtons();
 if(db){
   db.auth.getSession().then(({data})=>{user=data.session?.user||null;updateAuth();if(user){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}}).catch(()=>{});
   db.auth.onAuthStateChange((_event,session)=>{const changed=session?.user?.id!==(user&&user.id);user=session?.user||null;updateAuth();if(user&&changed){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}else if(!user){renderReview();updateStats();renderQuestion();}});
+}
+
+/* ================= 阅读试卷（整篇材料 + 多小题 + 一次批改） ================= */
+const isReadingKind=(k)=>k==='reading'||k==='classical'||k==='modern';
+function splitQ(q){
+  const t=q.question||'';
+  const i=t.indexOf('【阅读材料】'),j=t.indexOf('【小题');
+  if(i>=0&&j>i){
+    const no=Number((t.slice(j+5,j+12).match(/\d/)||[1])[0]);
+    return {mat:t.slice(i+6,j).trim(),sub:t.slice(j).replace(/^【小题\s*\d+】?/,'').trim(),no};
+  }
+  return {mat:'',sub:t,no:1};
+}
+function groupReadingQs(){
+  const map={};
+  practiceQuestions.forEach(q=>{if(!isReadingKind(kindOf(q)))return;const g=q.group||'未分组'; (map[g]=map[g]||[]).push(q)});
+  Object.values(map).forEach(arr=>arr.sort((a,b)=>splitQ(a).no-splitQ(b).no));
+  return map;
+}
+let rCur=null,rRecent=[];
+function renderReadingPass(){
+  const groups=groupReadingQs();const keys=Object.keys(groups);
+  if(!keys.length){$('#practice-card').innerHTML='<div class="empty-state">暂无阅读材料。</div>';return}
+  const avail=keys.filter(k=>!rRecent.includes(k));
+  const key=avail.length?avail[Math.floor(Math.random()*avail.length)]:keys[Math.floor(Math.random()*keys.length)];
+  rRecent.push(key);if(rRecent.length>5)rRecent.shift();
+  rCur={key,items:groups[key].map(q=>({q,sel:null})),idx:0};
+  drawReading();
+}
+function drawReading(){
+  const p=rCur;if(!p)return;
+  const item=p.items[p.idx],q=item.q,{mat,sub,no}=splitQ(q);
+  const n=p.items.length,done=p.items.filter(x=>x.sel!=null).length;
+  qStart=Date.now();
+  if($('#practice-index'))$('#practice-index').textContent=`阅读理解 · ${p.key}`;
+  const opts=(q.options||[]).map((o,i)=>{
+    const L=String.fromCharCode(65+i);
+    const sel=item.sel===L;
+    return `<button class="${sel?'selected':''}" data-l="${L}" ${sel?'':''}><i>${L}</i> ${esc(o)}</button>`;
+  }).join('');
+  $('#practice-card').innerHTML=`
+    <div class="question-meta"><span class="tag">${esc(activeBank)}</span><span class="q-badge ${q.rType==='modern'?'b-modern':'b-classical'}">阅读 · ${q.rType==='modern'?'白话文':'文言文'}</span><span class="q-timers">总用时 <b id="time-total">0:00</b> · 本题 <b id="time-q">0:00</b></span></div>
+    <div class="rd-title">《${esc(p.key)}》${mat?`<span class="rd-subinfo">共 ${n} 小题</span>`:''}</div>
+    ${mat?`<div class="reading-mat rd-mat">${esc(mat)}</div>`:''}
+    <div class="rd-q">
+      <div class="rd-no">第 ${no} 题 / 共 ${n} 题</div>
+      <h3 style="font-size:17px">${esc(sub)}</h3>
+      <div class="options">${opts}</div>
+    </div>
+    <div class="rd-nav">
+      <button class="outline" id="rd-prev" ${p.idx===0?'disabled':''}>‹ 上一题</button>
+      <button class="primary" id="rd-submit" ${done<n?'disabled':''}>提交批改（${done}/${n}）</button>
+      <button class="outline" id="rd-next" ${p.idx>=n-1?'disabled':''}>下一题 ›</button>
+    </div>`;
+  const pick=(L)=>{item.sel=L;$$('#practice-card .rd-q .options button').forEach(b=>b.classList.toggle('selected',b.dataset.l===L));const d=$$('#practice-card .rd-q .options button.selected').length||1;const dn=p.items.filter(x=>x.sel!=null).length;const sb=$('#rd-submit');if(sb){sb.disabled=dn<n;sb.textContent=`提交批改（${dn}/${n}）`}};
+  $$('#practice-card .rd-q .options button').forEach(b=>b.onclick=()=>pick(b.dataset.l));
+  const subBtn=$('#rd-submit');
+  if(subBtn)subBtn.onclick=()=>{const un=p.items.filter(x=>x.sel==null).length;if(un>0){toast(`还有 ${un} 题未作答`);return}submitReading()};
+  const prev=$('#rd-prev');if(prev)prev.onclick=()=>{if(p.idx>0){p.idx--;drawReading()}};
+  const next=$('#rd-next');if(next)next.onclick=()=>{if(p.idx<n-1){p.idx++;drawReading()}};
+}
+function recordReadingAnswer(q,ok,sel){
+  ensureSession();
+  const now=Date.now(),d=read('details');
+  d.push({start:session.start,qid:q.id,type:q.type,q:(q.question||'').slice(0,500),ans:q.answer||'',chosen:sel||'',kind:kindOf(q),ok:!!ok,ts:now,durMs:0});
+  if(d.length>5000)d.splice(0,d.length-5000);
+  write('details',d);
+  session.qCount++;if(ok)session.correct++;
+  applyResult(q.id,ok);
+  if(ok)wrongListRemove(q.id);else wrongListAdd(q);
+  if(user&&db){
+    if(ok)db.from('wrong_questions').delete().eq('user_id',user.id).eq('question_id',q.id).then(()=>{}).catch(()=>{});
+    else db.from('wrong_questions').upsert({user_id:user.id,question_id:q.id,question:q},{onConflict:'user_id,question_id'}).then(()=>{}).catch(()=>{});
+    const c=srsStore().qs[q.id];
+    if(c)db.from('review_state').upsert({user_id:user.id,question_id:q.id,box:c.box,due_at:new Date(c.due||Date.now()).toISOString(),wrong:c.wrong,ok_count:c.ok},{onConflict:'user_id,question_id'}).then(()=>{}).catch(()=>{});
+  }
+}
+function submitReading(){
+  const p=rCur;if(!p)return;
+  let okN=0;
+  p.items.forEach((it)=>{
+    const q=it.q;const L=String(q.answer||'A').toUpperCase();
+    const ok=it.sel===L;
+    it.ok=ok;if(ok)okN++;
+    recordReadingAnswer(q,ok,it.sel||'');
+  });
+  const n=p.items.length;
+  const rows=p.items.map((it,i)=>{
+    const q=it.q,{sub}=splitQ(q);
+    const letters=(q.options||[]).map((o,j)=>String.fromCharCode(65+j));
+    const showSel=it.sel?`${it.sel}. ${esc((q.options||[])[it.sel.charCodeAt(0)-65]||'')}`:'（未作答）';
+    const showAns=`${q.answer}. ${esc((q.options||[])[String(q.answer).charCodeAt(0)-65]||'')}`;
+    return `<div class="hist-q ${it.ok?'ok':'no'}"><div class="hq-head"><b>第 ${i+1} 题</b><span class="hq-res">${it.ok?'答对 ✓':'答错 ✗'}</span></div><div class="hq-q">${esc(sub)}</div><div class="hq-ans">你的选择：${showSel} ｜ 正确答案：${showAns}</div>${explainHtml(q)}</div>`;
+  }).join('');
+  const pct=Math.round(okN/n*100);
+  $('#practice-card').innerHTML=`
+    <div class="rd-result-head"><div><b>《${esc(p.key)}》批改结果</b><span>答对 ${okN}/${n} · 正确率 ${pct}%</span></div></div>
+    ${rows}
+    <div class="rd-nav"><button class="primary" id="rd-again">再做一篇 →</button><button class="outline" id="rd-end">结束练习</button></div>`;
+  $('#rd-again').onclick=()=>renderReadingPass();
+  $('#rd-end').onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;showView('home');toast('已结束阅读练习')};
+  updateStats();
 }
