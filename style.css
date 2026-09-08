@@ -183,3 +183,13 @@
   .cal-card{order:-1!important}
   .home-main{order:0}
 }
+
+/* widen mobile breakpoint: stacked with calendar FIRST up to 1024px */
+@media(max-width:1024px){
+  .home-grid{display:flex!important;flex-direction:column!important}
+  .cal-card{order:-1!important}
+  .home-main{order:0!important}
+}
+@media(min-width:1025px){
+  .home-grid{display:grid!important;grid-template-columns:1.05fr .95fr!important}
+}
