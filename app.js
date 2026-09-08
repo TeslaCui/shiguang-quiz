@@ -259,30 +259,45 @@ function renderAnalysis(){
 function renderReview(){
   const w=read('wrong-questions'),ses=read('sessions');
   $('#wrong-list').innerHTML=w.length?w.slice().reverse().map(q=>`<div class="recent-row"><span class="mini-icon pink">⚑</span><div><b>${esc(shortQ(q.question))}</b><small>答案：${q.answer||'见题目'} · ${q.explanation||'暂无解析'}</small></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
-  const fmt=(x)=>`<div class="recent-row clickable" data-nav-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><button class="hist-detail-btn" data-start="${x.start}">逐题明细</button></div>`;
+  const fmt=(x)=>`<div class="hist-item"><div class="recent-row clickable" data-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
   $('#history-list').innerHTML=ses.length?ses.slice().reverse().map(fmt).join(''):'<div class="empty-state">完成一次练习后，这里会显示记录。</div>';
-  $$('#history-list [data-nav-start]').forEach(el=>el.onclick=()=>openHistoryDetail(el.dataset.navStart));
-  $$('#history-list [data-start]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();renderHistoryDetail(b.dataset.start)});
+  $$('#history-list .hist-item .recent-row').forEach(row=>row.onclick=()=>toggleInline(row));
 }
-function renderHistoryDetail(startStr){
-  const area=$('#history-detail');if(!area)return;
-  const items=read('details').filter(x=>x.start===Number(startStr));
-  if(!items.length){area.innerHTML='<div class="empty-state">该场暂无逐题明细（早期记录不含明细）。</div>';return}
+function detailRowsHtml(items){
   const TYPE={single:'单选',multiple:'多选',judge:'判断',fill:'填空'};
   const chosenText=(x)=>{
     const ch=x.chosen||'';
     if(!ch)return x.ok?'（自评：正确）':'（自评：错误）';
     return [...ch].map(l=>{const idx=l.charCodeAt(0)-65;const o=(x.opts&&x.opts[idx])?shortQ(x.opts[idx]):'';return `${l}${o?' '+o:''}`}).join('；');
   };
-  const rows=items.map((x,i)=>{
+  return items.map((x,i)=>{
     const durMs=x.durMs??(i===0?(x.start?(x.ts-x.start):0):(x.ts-items[i-1].ts));
     const sec=Math.max(0,Math.round((durMs||0)/1000));
-    const lim=qLimitOf(x);
-    const over=sec>lim;
+    const lim=qLimitOf(x),over=sec>lim;
     return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE[x.type]||'题'}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur ${over?'over-time':''}">用时 ${fmtClock(sec)}${over?'（超时）':''}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
   }).join('');
-  area.innerHTML=`<div class="hist-detail-head"><b>本场逐题明细（${items.length} 题）</b><button class="outline" id="hist-detail-close">收起</button></div>${rows}`;
-  $('#hist-detail-close').onclick=()=>{area.innerHTML=''};
+}
+function toggleInline(row){
+  const holder=row.nextElementSibling;
+  if(!holder)return;
+  if(holder.innerHTML.trim()){holder.innerHTML='';row.classList.remove('open');return}
+  document.querySelectorAll('#history-list .inline-detail').forEach(h=>h.innerHTML='');
+  document.querySelectorAll('#history-list .recent-row').forEach(r=>r.classList.remove('open'));
+  const items=read('details').filter(x=>x.start===Number(row.dataset.start));
+  holder.innerHTML=items.length?detailRowsHtml(items):'<div class="empty-state">该场暂无逐题明细（早期记录不含）。</div>';
+  row.classList.add('open');
+}
+function openHistoryDetail(st){
+  const cur=document.querySelector('.view.active-view')?.id;
+  if(cur!=='history')showView('history');
+  const rows=[...document.querySelectorAll('#history-list .recent-row')];
+  const row=rows.find(r=>String(r.dataset.start)===String(st));
+  if(row)toggleInline(row);
+}
+function renderHistoryDetail(startStr){ // legacy direct renderer (kept for safety)
+  const items=read('details').filter(x=>x.start===Number(startStr));
+  const area=$('#history-detail');
+  if(area)area.innerHTML=items.length?`<div class="hist-detail-head"><b>逐题明细</b></div>${detailRowsHtml(items)}`:'';
 }
 function qLimitOf(o){
   if(o&&o.kind==='modern')return 150;
