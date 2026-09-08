@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const SUPABASE_URL='https://wcnmufiabeftlsregamh.supabase.co',SUPABASE_KEY='sb_publishable_FHlEZrROrCVM1WLdoij5Cw_7Ue64M1X';
 const db=window.supabase?.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'shiguang-quiz-auth'}});
 let user=null,questions=[],practiceQuestions=[],activeBank='中华文化题库',answered=false,currentQ=null,sessionRecent=[],session=null,practiceMode='free',taskIds=[],taskTotal=0,practiceKind='choice',practiceArmed=false;
-const titles={home:'总览',bank:'我的题库',practice:'开始刷题',wrong:'错题本'};
+const titles={home:'主页',history:'历史刷题',bank:'我的题库',detail:'题库详情',settings:'账号与设置',practice:'开始刷题'};
 // ---------- per-user namespaced local storage ----------
 const NS=()=>user?.id||'anon';
 // ---------- practice session (enter -> exit = one record) ----------
@@ -93,14 +93,23 @@ function showView(v){
   $$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   $('#page-title').textContent=titles[v]||titles.home;
   if(fromPractice&&v!=='practice'){closeSession();practiceMode='free';taskIds=[];practiceArmed=false}
-  if(v==='wrong')renderReview();
+  if(v==='history')renderReview();
+  if(v==='settings'){renderAccountPanel();syncAuthButtons()}
+  if(v==='home')renderCalendar();
   if(v==='practice'){if(practiceMode==='reviewDone')practiceMode='free';if(practiceArmed)renderQuestion();else renderSetup()}
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank){activeBank=bank.dataset.bank;showView('bank')}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank){activeBank=bank.dataset.bank;showBankDetail(activeBank)}});
 function bankName(q){return q.source&&(/港澳台|文化史|古代文化|pdf|阅读/i.test(q.source))?'中华文化题库':q.source||'未命名题库'}
 function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]??=[]).push(q)});return m}
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
-function renderBanks(){const groups=bankGroups(),names=Object.keys(groups),h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">题库正在加载。</div>';$('#home-banks').innerHTML=h;$('#all-banks').innerHTML=h;$('#bank-count').textContent=names.length;$('#bank-count-all').textContent=names.length;if($('#bank-total'))$('#bank-total').textContent=questions.length}
+function renderBanks(){
+  const groups=bankGroups(),names=Object.keys(groups);
+  const h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">暂无题库，可上传资料创建。</div>';
+  for(const id of ['home-banks','all-banks']){const el=$('#'+id);if(el)el.innerHTML=h}
+  for(const id of ['bank-count','bank-count-all']){const el=$('#'+id);if(el)el.textContent=names.length}
+  if($('#bank-total'))$('#bank-total').textContent=questions.length;
+  $('#detail-back')&&($('#detail-back').onclick=()=>showView('bank'));
+}
 const kindOf=(q)=>{
   if(q.rType==='classical')return 'classical';
   if(q.rType==='modern')return 'modern';
@@ -194,7 +203,7 @@ function updateStats(){
   $('#streak-count')&&($('#streak-count').textContent=streak);$('#checkin-count')&&($('#checkin-count').textContent=days.length);
   const fmt=(x)=>`<div class="recent-row"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
   $('#recent-list').innerHTML=ses.length?ses.slice(-5).reverse().map(fmt).join(''):'<div class="empty-state">还没有练习记录，开始第一题吧。</div>';
-  renderAnalysis();
+  renderCalendar();renderAnalysis();
 }
 function renderAnalysis(){
   const area=$('#analysis-area');if(!area)return;
@@ -394,7 +403,12 @@ function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');se
 if(location.protocol==='file:'&&$('#file-warning'))$('#file-warning').hidden=false;
 async function importFile(file){const ext=file.name.toLowerCase().split('.').pop();try{let rows=[];if(['xlsx','xls'].includes(ext)&&window.XLSX){const data=await file.arrayBuffer(),wb=XLSX.read(data,{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''})}else if(ext==='json'){rows=JSON.parse(await file.text());}else if(['csv','txt','md'].includes(ext)){const text=await file.text();rows=text.split(/\r?\n/).filter(Boolean).map((line,i)=>({question:line,options:['正确','错误'],answer:'A',explanation:'用户上传资料，待补充解析。',source:file.name,type:'single'}))}else{toast(`${file.name}：此格式需要服务端解析，未写入题库`);return}const imported=rows.map((r,i)=>{const v=normalize({source:file.name,type:r.type||'single',question:r.question||r['题目']||r['问题']||'',options:r.options||[r['选项A']||r.A||'正确',r['选项B']||r.B||'错误',r['选项C']||r.C||'',r['选项D']||r.D||''],answer:r.answer||r['答案']||'A',explanation:r.explanation||r['解析']||'用户上传资料，待补充解析。'},`upload-${Date.now()}-${i}`);return v});questions=questions.concat(imported);write('uploaded-questions',questions.filter(q=>q.source===file.name));renderBanks();renderQuestion();toast(`已导入 ${imported.length} 道题`)}catch(err){toast(`${file.name} 解析失败，请检查文件内容`)}}
 $('#choose-file').onclick=()=>$('#file-input').click();$('#upload-trigger').onclick=()=>$('#file-input').click();$('#file-input').onchange=e=>[...e.target.files].forEach(importFile);const zone=$('#upload-zone');zone?.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragging')});zone?.addEventListener('dragleave',()=>zone.classList.remove('dragging'));zone?.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragging');[...e.dataTransfer.files].forEach(importFile)});
-let authMode='login';function openAuth(){setAuthMode('login');$('#auth-modal').hidden=false;$('#auth-message').textContent=''}function closeAuth(){$('#auth-modal').hidden=true}function updateAuth(){const on=!!user;$('#auth-open').hidden=on;$('#auth-logout').hidden=!on;$('#profile-name').textContent=on?(user.user_metadata?.username||user.email?.split('@')[0]||'已登录用户'):'未登录';$('#profile-email').textContent=on?(user.email||user.phone||'已登录'):'登录后数据按账号独立保存';if($('#page-title').closest('#home-view')?.classList.contains('active-view'))$('#page-title').textContent=on?`你好，${user.user_metadata?.username||user.email?.split('@')[0]||'同学'} 👋`:'总览'}
+let authMode='login';function openAuth(){setAuthMode('login');$('#auth-modal').hidden=false;$('#auth-message').textContent=''}function closeAuth(){$('#auth-modal').hidden=true}function updateAuth(){const on=!!user;$('#auth-open').hidden=on;$('#auth-logout').hidden=!on;
+const nm=on?(user.user_metadata?.username||user.email?.split('@')[0]||'同学'):'未登录';
+$('#profile-name').textContent=nm;$('#profile-email').textContent=on?(user.email||user.phone||'已登录'):'登录后数据按账号独立保存';
+const av=$('#account-open .avatar');if(av)av.textContent=on?nm.slice(0,1):'用';
+syncAuthButtons();
+if($('#page-title').closest('#home-view')?.classList.contains('active-view')&&on)$('#page-title').textContent=`你好，${nm} 👋`;}
 function setAuthMode(mode){authMode=mode;const signup=mode==='signup';
 $('#auth-title').textContent=signup?'注册拾光题库':'登录拾光题库';
 $('#auth-subtitle').textContent=signup?'填写用户名、邮箱（手机号选填）完成注册。':'使用邮箱 / 手机号 / 用户名 + 密码登录。';
@@ -408,6 +422,103 @@ $('#auth-open').onclick=openAuth;$('#auth-close').onclick=closeAuth;$('#auth-swi
 const googleAuthBtn=$('#google-auth');if(googleAuthBtn)googleAuthBtn.onclick=async()=>{if(!db)return $('#auth-message').textContent='登录服务暂不可用';$('#auth-message').textContent='正在前往 Google 登录…';const redirectTo=location.protocol==='file:'?'https://teslacui.github.io/shiguang-quiz/':location.origin+location.pathname;const r=await db.auth.signInWithOAuth({provider:'google',options:{redirectTo}});if(r.error)$('#auth-message').textContent=`Google 登录失败：${r.error.message}`};
 async function logout(){closeSession();if(db)await db.auth.signOut();user=null;sessionRecent=[];renderReview();updateStats();renderQuestion();updateAuth();toast('已退出登录（数据已切换）')}
 $('#auth-logout').onclick=logout;
+function syncAuthButtons(){const on=!!user;for(const id of ['auth-open2']){const el=$('#'+id);if(el)el.hidden=on}for(const id of ['auth-logout2','ctx-logout']){const el=$('#'+id);if(el)el.hidden=!on}}
+function renderAccountPanel(){
+  const box=$('#set-account');if(!box)return;
+  if(!user){box.innerHTML='<div class="acct-empty">尚未登录。登录后可跨设备同步错题、记录与复习计划。</div>';return}
+  const meta=user.user_metadata||{};
+  box.innerHTML=`<div class="acct-form">
+    <label>用户名</label><input id="acct-username" value="${esc(meta.username||'')}" placeholder="用户名（至少 2 个字符）">
+    <label>手机号（选填）</label><input id="acct-phone" value="${esc(user.phone||meta.phone||'')}" placeholder="手机号">
+    <label>邮箱</label><input disabled value="${esc(user.email||'未绑定')}">
+    <button class="primary" id="acct-save" style="margin-top:12px">保存修改</button>
+  </div>`;
+  const save=$('#acct-save');if(save)save.onclick=async()=>{
+    const username=($('#acct-username').value||'').trim(),phone=($('#acct-phone').value||'').trim();
+    if(username.length<2)return toast('用户名至少 2 个字符');
+    if(db&&user){
+      try{
+        const {error}=await db.from('profiles').upsert({user_id:user.id,username,phone,email:user.email||''},{onConflict:'user_id'});
+        if(error)throw error;
+        await db.auth.updateUser({data:{username,phone}});
+        user={...user,user_metadata:{...(user.user_metadata||{}),username,phone},phone};
+        updateAuth();renderAccountPanel();toast('已保存');
+      }catch(err){toast('保存失败：'+(err.message||err))}
+    }else toast('请先登录');
+  };
+}
+function applyFont(px){
+  px=Number(px)||16;
+  const r=px/16;
+  document.documentElement.style.fontSize='100%';
+  document.body.style.zoom=r;
+  const s=read('settings',{});s.font=px;write('settings',s);
+  $$('#font-btns button').forEach(b=>b.classList.toggle('on',Number(b.dataset.fs)===px));
+}
+function renderCalendar(){
+  const el=$('#calendar');if(!el)return;
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  const cm=$('#cal-month');if(cm)cm.textContent=`${y}年${m+1}月`;
+  const days=new Set(read('sessions').map(x=>dayKey(x.start)));
+  const first=new Date(y,m,1),lead=(first.getDay()+6)%7,total=new Date(y,m+1,0).getDate();
+  const today=now.getDate();
+  const wk=(arr)=>`<div class="cal-week">${arr.join('')}</div>`;
+  let out='<div class="cal-week cal-head">'+['一','二','三','四','五','六','日'].map(w=>`<span>${w}</span>`).join('')+'</div>';
+  const cells=[];
+  for(let i=0;i<lead;i++)cells.push('<span class="cal-cell off"></span>');
+  for(let d=1;d<=total;d++){
+    const k=dayKey(new Date(y,m,d).getTime());
+    const cls=['cal-cell',d===today?'today':'',days.has(k)?'done':''].filter(Boolean).join(' ');
+    cells.push(`<span class="${cls}">${d}</span>`);
+  }
+  for(let i=0;i<cells.length;i+=7)out+=wk(cells.slice(i,i+7));
+  el.innerHTML=out;
+}
+function showBankDetail(name){
+  activeBank=name;
+  const qs=(bankGroups()[name]||[]).filter(q=>!q.needsReview);
+  const all=(bankGroups()[name]||[]);
+  const d=read('details'),ids=new Set(all.map(q=>q.id));
+  const doneSet=new Set();let dt=0,dok=0;
+  d.forEach(x=>{if(!ids.has(x.qid))return;doneSet.add(x.qid);dt++;if(x.ok)dok++});
+  const done=doneSet.size,pct=all.length?Math.round(done/all.length*100):0;
+  const types={};
+  all.forEach(q=>{const t=q.type==='fill'?'填空':q.type==='multiple'?'多选':q.type==='judge'?'判断':(q.rType?'阅读':'单选');types[t]=(types[t]||0)+1});
+  const srs=srsStore().qs;let due=0,weak=0;
+  all.forEach(q=>{const c=srs[q.id];if(!c)return;if(c.due&&c.due<=Date.now()){if(c.wrongStreak)weak++;else due++}});
+  $('#detail-name').textContent=name;
+  $('#detail-sub').textContent=`共 ${all.length} 题（可练 ${qs.length}）· 已刷 ${done} / ${all.length}`;
+  $('#detail-body').innerHTML=`
+    <div class="detail-progress"><div class="dp-top"><b>刷题进度</b><span>${done} / ${all.length} · ${pct}%</span></div><div class="meter"><i style="width:${pct}%"></i></div></div>
+    <div class="detail-grid">
+      <div class="set-card"><h4>题型构成</h4>${Object.entries(types).map(([k,v])=>`<div class="set-row"><span>${k}</span><b>${v} 题</b></div>`).join('')||'<div class="acct-empty">暂无</div>'}</div>
+      <div class="set-card"><h4>完成情况</h4><div class="set-row"><span>本库作答正确率</span><b>${dt?Math.round(dok/dt*100)+'%':'—'}</b></div><div class="set-row"><span>到期复习</span><b>${due} 题</b></div><div class="set-row"><span>薄弱待巩固</span><b>${weak} 题</b></div></div>
+    </div>
+    <div class="detail-actions"><button class="primary" id="detail-start">开始刷这个题库 <span>→</span></button></div>`;
+  const start=$('#detail-start');
+  if(start)start.onclick=()=>{practiceArmed=false;practiceKind='all';showView('practice')};
+  showView('detail');
+}
+function resetLocalData(){
+  if(!confirm('将清除本账号/本机的刷题记录、逐题明细、错题本与复习计划（题库本身不删除），确定继续？'))return;
+  for(const k of ['sessions','details','wrong-questions','practice-history'])write(k,[]);
+  const s=srsStore();s.qs={};srsSave(s);
+  toast('已清除本机练习数据');updateStats();renderReview();renderCalendar();renderAccountPanel();
+}
+// bind account/settings ui once
+(function(){
+  const menu=$('#account-menu');const ap=$('#account-open');
+  if(ap)ap.addEventListener('contextmenu',(e)=>{e.preventDefault();menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-170)+'px';menu.style.top=Math.min(e.clientY,innerHeight-90)+'px'});
+  document.addEventListener('click',(e)=>{if(menu&&!menu.contains(e.target))menu.hidden=true});
+  $('#ctx-settings')&&($('#ctx-settings').onclick=()=>{menu.hidden=true;showView('settings')});
+  $('#ctx-logout')&&($('#ctx-logout').onclick=()=>{menu.hidden=true;logout()});
+  const a2=$('#auth-open2');if(a2)a2.onclick=openAuth;
+  const l2=$('#auth-logout2');if(l2)l2.onclick=logout;
+  $('#reset-local')&&($('#reset-local').onclick=resetLocalData);
+  $$('#font-btns button').forEach(b=>b.onclick=()=>applyFont(b.dataset.fs));
+  const fs=read('settings',{}).font;if(fs)applyFont(fs);
+})();
+
 $('#clear-wrong').onclick=async()=>{write('wrong-questions',[]);const s=srsStore();for(const id in s.qs)if(s.qs[id].wrongStreak>0){s.qs[id].wrongStreak=0;s.qs[id].box=0}srsSave(s);if(user&&db){try{await db.from('wrong_questions').delete().eq('user_id',user.id)}catch(e){}}renderReview();updateStats();toast('已清空错题本')};
 // ---- cloud sync (per current user namespace) ----
 async function loadCloudForUser(){
@@ -475,9 +586,9 @@ window.addEventListener('pagehide',()=>{if(session)closeSession()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&session)closeSession()});
 $('#start-review')&&($('#start-review').onclick=startReview);
 $('#auth-submit').onclick=handleAuthSubmit;
-migrateLegacy();renderBanks();renderReview();updateStats();
+migrateLegacy();renderBanks();renderReview();updateStats();renderCalendar();
 fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());
-updateAuth();
+updateAuth();renderCalendar();renderAccountPanel();syncAuthButtons();
 if(db){
   db.auth.getSession().then(({data})=>{user=data.session?.user||null;updateAuth();if(user){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}}).catch(()=>{});
   db.auth.onAuthStateChange((_event,session)=>{const changed=session?.user?.id!==(user&&user.id);user=session?.user||null;updateAuth();if(user&&changed){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}else if(!user){renderReview();updateStats();renderQuestion();}});

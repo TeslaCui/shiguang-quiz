@@ -17,12 +17,15 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">✦</div><div><strong>拾光题库</strong><span>STUDY SMARTER</span></div></div>
-      <nav>
-        <button class="nav-item" data-view="home"><span>⌂</span>总览</button>
+      <nav class="side-nav">
+        <button class="nav-item active" data-view="home"><span>⌂</span>主页</button>
+        <button class="nav-item" data-view="history"><span>◷</span>历史刷题</button>
         <button class="nav-item" data-view="bank"><span>▤</span>我的题库</button>
-        <button class="nav-item" data-view="wrong"><span>⚑</span>错题本</button>
       </nav>
-      <div class="sidebar-bottom"><div class="streak"><span class="flame">♨</span><div><b>学习状态</b><small>完成练习后会更新</small></div></div><div class="profile"><div class="avatar">用</div><div><b id="profile-name">未登录</b><small id="profile-email">登录后同步记录</small></div><span class="dots">•••</span></div></div>
+      <div class="sidebar-bottom">
+        <button class="profile" id="account-open" data-view="settings" title="账号与设置（右键更多）"><div class="avatar">用</div><div><b id="profile-name">未登录</b><small id="profile-email">登录后同步记录</small></div><span class="dots">•••</span></button>
+        <div class="ctx-menu" id="account-menu" hidden><button id="ctx-settings">账号与设置</button><button id="ctx-logout">退出登录</button></div>
+      </div>
     </aside>
     <main class="main">
       <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">总览</h1></div><div class="top-actions"><button class="help-btn">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout" hidden>退出登录</button></div></header>
@@ -32,25 +35,36 @@
         <div class="hero"><div><span class="eyebrow warm">今日学习计划</span><h2>把碎片时间，<em>变成进步。</em></h2><p>每一次练习都算数，今天也为目标前进一点点。</p><button class="primary hero-start" data-view="practice">开始刷题 <span>→</span></button></div><div class="hero-art"><div class="sun"></div><div class="book">✎</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div></div>
         <div class="smart-strip"><span class="who" id="user-data-label"></span><span>冲刺重点 <b id="core-count">0</b> 题</span><span>到期复习 <b id="due-count">0</b> 题</span><span>薄弱题 <b id="weak-count">0</b> 题</span><span>今日已刷 <b id="today-count">0</b> 题</span></div>
         <div class="review-task"><div class="rt-info"><b>今日复习任务</b><span>到期 <b id="review-due">0</b> 题 · 薄弱 <b id="review-weak">0</b> 题，答错自动回炉重练</span></div><button class="primary" id="start-review">开始今日复习 <span>→</span></button><div class="rt-done" id="review-done-hint" hidden>今日复习已完成 🎉</div></div>
-        <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>累计答题（账号独立）</small><strong id="total-answered">0</strong><span class="trend">进入 → 退出计为一次练习</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">按练习会话统计</span></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><small>连续打卡</small><strong id="streak-count">0</strong><span class="trend">累计打卡 <b id="checkin-count" style="color:inherit">0</b> 天</span></div></div></div>
-        <div class="section-head recent-head"><div><h3>学习分析</h3><p>掌握程度与薄弱点实时检测，随答题实时更新</p></div></div>
-        <div id="analysis-area" class="analysis"><div class="empty-state">完成几次练习后，这里会显示学习分析。</div></div>
-        <div class="section-head"><div><h3>我的题库 <span class="count" id="bank-count">3</span></h3><p>管理你的专属知识空间</p></div><button class="text-btn" data-view="bank">查看全部 <span>→</span></button></div>
-        <div class="bank-grid" id="home-banks"></div>
-        <div class="section-head recent-head"><div><h3>最近练习</h3><p>温故而知新，继续保持</p></div><button class="text-btn" data-view="wrong">全部记录 <span>→</span></button></div>
+        <div class="home-grid">
+          <div class="cal-card"><div class="cal-head"><b>本月打卡</b><span id="cal-month"></span></div><div id="calendar"></div><div class="cal-legend"><i></i>已练习</div></div>
+          <div class="home-right">
+            <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>累计答题（账号独立）</small><strong id="total-answered">0</strong><span class="trend">进入 → 退出计为一次练习</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">按练习会话统计</span></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><small>连续打卡</small><strong id="streak-count">0</strong><span class="trend">累计打卡 <b id="checkin-count" style="color:inherit">0</b> 天</span></div></div></div>
+            <div class="quick-links"><button class="primary ghost" data-view="practice">开始刷题</button><button class="primary ghost" data-view="history">学习记录</button><button class="primary ghost" data-view="bank">我的题库</button></div>
+          </div>
+        </div>
+        <div class="section-head recent-head"><div><h3>最近练习</h3><p>温故而知新，继续保持</p></div><button class="text-btn" data-view="history">全部记录 <span>→</span></button></div>
         <div class="recent-list" id="recent-list"><div class="empty-state">还没有练习记录，开始第一题吧。</div></div>
       </section>
-      <section id="bank-view" class="view"><div class="view-title"><div><span class="eyebrow">YOUR COLLECTION</span><h2>我的题库</h2><p>上传资料，自动整理成你的专属题库。</p></div><button class="primary" id="upload-trigger">＋ 上传文件</button></div><div class="upload-zone" id="upload-zone"><div class="upload-cloud">↑</div><h3>拖拽文件到这里，或点击上传</h3><p>支持 TXT、Markdown、Word、Excel、PPT、PDF、CSV、JSON、HTML 等格式，可一次选择多个文件</p><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.html,.htm,.xml,.yaml,.yml,.log" hidden><button class="outline" id="choose-file">选择文件</button></div><div class="section-head bank-all-head"><div><h3>全部题库 <span class="count" id="bank-count-all">3</span></h3></div><div class="filters"><button class="filter active">全部</button><button class="filter">最近使用</button></div></div><div class="bank-grid all-grid" id="all-banks"></div></section>
+      <section id="history-view" class="view"><div class="view-title"><div><span class="eyebrow">REVIEW & HISTORY</span><h2>历史刷题</h2><p>错题本、刷题记录与学习数据分析</p></div></div><div class="section-head recent-head"><div><h3>学习分析</h3><p>掌握程度与薄弱点实时检测，随答题实时更新</p></div></div><div id="analysis-area" class="analysis"><div class="empty-state">完成几次练习后，这里会显示学习分析。</div></div><div class="section-head recent-head"><div><h3>错题本</h3><p>复习答错的题目，巩固薄弱知识点</p></div><button class="outline" id="clear-wrong">清空错题</button></div><div class="recent-list" id="wrong-list"></div><div class="section-head recent-head"><div><h3>刷题记录</h3><p>每一次练习都会被记录，可展开查看逐题作答</p></div></div><div class="recent-list" id="history-list"></div><div id="history-detail" class="history-detail"></div></section>
+      <section id="detail-view" class="view"><div class="view-title"><div><span class="eyebrow">题库详情</span><h2 id="detail-name">题库详情</h2><p id="detail-sub"></p></div><button class="outline" id="detail-back">← 返回我的题库</button></div><div id="detail-body"></div></section>
+      <section id="settings-view" class="view"><div class="view-title"><div><span class="eyebrow">ACCOUNT</span><h2>账号与设置</h2><p>管理个人信息与网站偏好</p></div></div>
+        <div class="settings-wrap">
+          <div class="set-card"><h4>账号信息</h4><div id="set-account"></div></div>
+          <div class="set-card"><h4>界面设置</h4><div class="set-row"><span>字体大小</span><div class="font-btns" id="font-btns"><button data-fs="14">小</button><button data-fs="16" class="on">中</button><button data-fs="18">大</button></div></div><div class="set-hint">修改后立即生效，随账号保存</div></div>
+          <div class="set-card"><h4>数据与登录</h4><div class="set-row"><button class="outline" id="reset-local">清除本机练习数据</button></div><div class="set-row"><button class="auth-btn" id="auth-open2">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout2" hidden>退出登录</button></div></div>
+        </div>
+      </section>
+      <section id="bank-view" class="view"><div class="view-title"><div><span class="eyebrow">YOUR COLLECTION</span><h2>我的题库</h2><p>点击题库可查看详情、已刷进度与开始练习。</p></div><button class="primary" id="upload-trigger">＋ 上传文件</button></div><div class="upload-zone" id="upload-zone"><div class="upload-cloud">↑</div><h3>拖拽文件到这里，或点击上传</h3><p>支持 TXT、Markdown、Word、Excel、PPT、PDF、CSV、JSON、HTML 等格式，可一次选择多个文件</p><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.html,.htm,.xml,.yaml,.yml,.log" hidden><button class="outline" id="choose-file">选择文件</button></div><div class="section-head bank-all-head"><div><h3>全部题库 <span class="count" id="bank-count-all">3</span></h3></div></div><div class="bank-grid all-grid" id="all-banks"></div></section>
       <section id="practice-view" class="view"><div class="view-title"><div><span class="eyebrow">中华文化知识库</span><h2>开始刷题</h2><p>每次练习都从真实题库记录进度。</p></div><div class="practice-progress"><span>当前题目</span><b id="practice-index">0 / 0</b><div><i id="practice-meter"></i></div></div></div>
         <div class="practice-layout"><div class="practice-card" id="practice-card"><div class="empty-state">题库正在加载。</div></div><aside class="practice-aside"><div class="aside-card"><span class="aside-label">本次练习</span><strong>中华文化知识库</strong><div class="meter"><i id="aside-meter"></i></div><small id="aside-progress">尚未开始</small></div><div class="aside-card tips"><span class="aside-label">题库说明</span><p>题库来自 2023 全国港澳台大学生中华文化知识大赛官方资料及教材补充，共 2000+ 题，题干、选项、答案与解析完整。采用「智能选题」：到期复习优先、薄弱（错题）加权、新题随机，按遗忘曲线安排重复；刷题记录与错题本按账号独立保存。</p></div></aside></div></section>
-      <section id="wrong-view" class="view"><div class="view-title"><div><span class="eyebrow">REVIEW & HISTORY</span><h2>错题本</h2><p>复习答错的题目，巩固薄弱知识点。</p></div><button class="outline" id="clear-wrong">清空错题</button></div><div class="recent-list" id="wrong-list"></div><div class="section-head recent-head"><div><h3>刷题记录</h3><p>你的每一次练习都会被记录，可展开查看逐题作答</p></div></div><div class="recent-list" id="history-list"></div><div id="history-detail" class="history-detail"></div></section>
     </main>
   </div>
   <div class="auth-modal" id="auth-modal" hidden><div class="auth-panel"><button class="auth-close" id="auth-close">×</button><span class="eyebrow">YOUR ACCOUNT</span><h2 id="auth-title">登录拾光题库</h2><p id="auth-subtitle">使用手机号和密码登录。</p><div class="auth-divider"><span id="auth-divider-text">手机号登录</span></div><input id="auth-identifier" type="text" placeholder="邮箱 / 手机号 / 用户名" autocomplete="username"><input id="auth-username" type="text" placeholder="用户名（用于登录）" autocomplete="nickname" hidden><input id="auth-email" type="email" placeholder="邮箱" autocomplete="email" hidden><input id="auth-phone" type="tel" placeholder="手机号（选填）" autocomplete="tel" hidden><input id="auth-password" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password"><input id="auth-confirm" type="password" placeholder="确认密码" autocomplete="new-password" hidden><button class="primary auth-submit" id="auth-submit">登录</button><button class="text-btn auth-switch" id="auth-switch">没有账号？注册</button><div class="auth-message" id="auth-message"></div></div></div>
   <nav class="mobile-nav" aria-label="主导航">
-    <button class="nav-item active" data-view="home"><span>⌂</span>总览</button>
+    <button class="nav-item active" data-view="home"><span>⌂</span>主页</button>
+    <button class="nav-item" data-view="history"><span>◷</span>历史</button>
     <button class="nav-item" data-view="bank"><span>▤</span>题库</button>
-    <button class="nav-item" data-view="wrong"><span>⚑</span>记录</button>
+    <button class="nav-item" data-view="settings"><span>☰</span>账号</button>
   </nav>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="app.js"></script>
   <script>if('serviceWorker' in navigator && location.protocol !== 'file:'){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
