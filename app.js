@@ -912,7 +912,7 @@ function mergedMat(items){
 function renderReadingSheet(){
   const p=rCur,key=p.key,n=p.items.length;
   const first=p.items[0].q;
-  const mat=mergedMat(p.items);
+  const mat=readingArt(p.items);
   const renderQ=()=>{
     const it=p.items[p.idx],q=it.q,{sub}=splitQ(q);
     const opts=(q.options||[]).map((o,j)=>{const L=String.fromCharCode(65+j);return `<button class="${it.sel===L?'selected':''}" data-l="${L}"><i>${L}</i> ${esc(o)}</button>`}).join('');
@@ -973,4 +973,17 @@ function drawReading(){
   qStart=Date.now();
   if($('#practice-index'))$('#practice-index').textContent=`阅读理解 · ${key}`;
   renderReadingSheet();
+}
+function readingArt(items){
+  const it=(items.find((x)=>x.q&&x.q.full&&x.q.full.trim()));
+  if(it&&it.q.full.trim())return it.q.full;
+  const seen=new Set(),parts=[];
+  items.forEach(x=>{const q=x.q||x,{mat}=splitQ(q);const m=(mat||'').trim();if(!m||m.length<40||/^（|见前题|同上|略以节省|全文见前/.test(m))return;if(!seen.has(m)){seen.add(m);parts.push(m)}});
+  return parts.join('\n\n');
+}
+function matHtml(mat){
+  if(!mat)return '';
+  const raw=String(mat).replace(/\r/g,'');
+  const blocks=raw.split(/\n\s*\n|(?=[①②③④⑤⑥⑦⑧⑨⑩])/).map(s=>s.trim()).filter(Boolean);
+  return `<div class="reading-mat rd-mat">${blocks.map(s=>`<p>${esc(s)}</p>`).join('')}</div>`;
 }
