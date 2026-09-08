@@ -607,7 +607,14 @@ async function loadCloudForUser(){
       db.from('review_state').select('*').eq('user_id',user.id),
       db.from('practice_sessions').select('*').eq('user_id',user.id).order('started_at',{ascending:true})
     ]);
-    if(w&&!w.error&&w.data&&w.data.length)write('wrong-questions',w.data.map(x=>x.question));
+    if(w&&!w.error&&w.data){
+      const cloud=w.data.map(x=>x.question).filter(x=>x&&x.id);
+      const local=read('wrong-questions').filter(x=>x&&x.id);
+      const map=new Map();
+      cloud.forEach(q=>map.set(q.id,q));
+      local.forEach(q=>{if(!map.has(q.id))map.set(q.id,q)});
+      if(map.size!==local.length||cloud.length)write('wrong-questions',[...map.values()]);
+    }
     if(r&&!r.error&&r.data&&r.data.length){
       const s=srsStore();let touched=false;
       for(const row of r.data){if(row.question_id&&!s.qs[row.question_id]){s.qs[row.question_id]={box:row.box??0,last:0,due:row.due_at?new Date(row.due_at).getTime():0,wrong:row.wrong??0,ok:row.ok_count??0};touched=true}}
