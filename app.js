@@ -256,12 +256,43 @@ function renderAnalysis(){
     <div class="ana-card"><div class="ana-title">薄弱点提醒</div>${weakBlocks}${repeatBlocks}</div>
   </div>`;
 }
-function renderReview(){
-  const w=read('wrong-questions'),ses=read('sessions');
-  $('#wrong-list').innerHTML=w.length?w.slice().reverse().map(q=>`<div class="recent-row"><span class="mini-icon pink">⚑</span><div><b>${esc(shortQ(q.question))}</b><small>答案：${q.answer||'见题目'} · ${q.explanation||'暂无解析'}</small></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
+let wrongSort='new';
+function buildWrongDetailHtml(q){
+  const ansText=(q.options||[])[String(q.answer||'A').charCodeAt(0)-65]||'';
+  return `<div class="hq-q">${esc(q.question)}</div>
+    <div class="w-opt">${(q.options||[]).map((o,i)=>`<div><b>${String.fromCharCode(65+i)}.</b> ${esc(o)}</div>`).join('')}</div>
+    <div class="hq-ans">正确答案：${esc(q.answer)}${ansText?'（'+esc(ansText)+'）':''}</div>
+    ${q.translation?`<div class="w-exp"><b>参考译文</b> ${esc(q.translation)}</div>`:''}
+    <div class="w-exp"><b>解析</b> ${esc(q.explanation||'暂无')}</div>`;
+}
+function toggleWrong(row){
+  const holder=row.nextElementSibling;
+  if(!holder)return;
+  if(holder.innerHTML.trim()){holder.innerHTML='';row.classList.remove('open');return}
+  $$('#wrong-list .inline-detail').forEach(h=>h.innerHTML='');
+  $$('#wrong-list .wrong-row').forEach(r=>r.classList.remove('open'));
+  const q=read('wrong-questions').find(x=>x.id===row.dataset.id);
+  if(q){holder.innerHTML=buildWrongDetailHtml(q);row.classList.add('open')}
+}
+function renderWrong(){
+  const w=read('wrong-questions'),d=read('details');
+  const stat={};
+  d.forEach(x=>{if(x.ok)return;const e=stat[x.qid]||(stat[x.qid]={n:0,last:0});e.n++;if(x.ts>e.last)e.last=x.ts});
+  const rows=w.map(q=>{const s=stat[q.id]||{n:0,last:0};return {q,n:s.n,last:s.last}});
+  rows.sort(wrongSort==='most'?(a,b)=>b.n-a.n||b.last-a.last:(a,b)=>b.last-a.last||b.n-a.n);
+  $('#wrong-count')&&($('#wrong-count').textContent=rows.length);
+  $('#wrong-list').innerHTML=rows.length?rows.map(({q,n})=>`<div class="hist-item"><div class="recent-row wrong-row" data-id="${esc(q.id)}"><span class="mini-icon pink">⚑</span><div class="wrong-body"><b>${esc(shortQ(q.question))}</b></div><span class="wcount">错 ${n} 次</span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
+  $$('#wrong-list .wrong-row').forEach(r=>r.onclick=()=>toggleWrong(r));
+}
+function renderHistoryList(){
+  const ses=read('sessions');
   const fmt=(x)=>`<div class="hist-item"><div class="recent-row clickable" data-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
   $('#history-list').innerHTML=ses.length?ses.slice().reverse().map(fmt).join(''):'<div class="empty-state">完成一次练习后，这里会显示记录。</div>';
   $$('#history-list .hist-item .recent-row').forEach(row=>row.onclick=()=>toggleInline(row));
+}
+function renderReview(){
+  renderWrong();
+  renderHistoryList();
 }
 function detailRowsHtml(items){
   const TYPE={single:'单选',multiple:'多选',judge:'判断',fill:'填空'};
@@ -555,6 +586,7 @@ function resetLocalData(){
   const l2=$('#auth-logout2');if(l2)l2.onclick=logout;
   $('#reset-local')&&($('#reset-local').onclick=resetLocalData);
   $$('#font-btns button').forEach(b=>b.onclick=()=>applyFont(b.dataset.fs));
+$$('[data-wsort]').forEach(b=>b.onclick=()=>{wrongSort=b.dataset.wsort;$$('[data-wsort]').forEach(x=>x.classList.toggle('active',x===b));renderWrong()});
   const fs=read('settings',{}).font;if(fs)applyFont(fs);
 })();
 

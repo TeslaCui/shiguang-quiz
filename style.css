@@ -147,3 +147,19 @@
 #history-list .recent-row .arr{margin-left:8px;color:#b3aed1;transition:.2s;font-size:14px}
 #history-list .recent-row.open .arr{transform:rotate(180deg);color:var(--purple)}
 .inline-detail{padding:6px 14px 12px;background:#fbfaff;border-top:1px dashed #e5def5}
+
+
+/* history & wrong compact/accordion extras */
+.wrong-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.wrong-body{flex:1;min-width:0}
+#history-list .recent-row,#wrong-list .recent-row{padding:11px 14px}
+.inline-detail{padding:4px 14px 12px}
+.wcount{background:#fff0f5;color:#db7da5;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.w-opt{margin:6px 0;font-size:12px;color:#4a455e;line-height:1.9}
+.w-exp{font-size:12px;color:#5d5567;line-height:1.8;margin-top:6px;background:#f4f2fb;border-radius:8px;padding:9px 11px}
+
+
+/* even breathing whitespace on both sides */
+@media(min-width:1025px){
+  .main{margin:0 auto;max-width:min(1160px,calc(100vw - 242px - 44px));padding:31px 20px 70px}
+}
