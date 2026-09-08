@@ -134,10 +134,10 @@
 .hq-dur{font-size:15px;font-weight:800;color:var(--purple);font-variant-numeric:tabular-nums}
 @media(max-width:640px){.q-timers b{font-size:16px}.practice-exit{margin-left:8px;padding:7px 10px}.q-badge{font-size:12px}}
 
-/* fixed-height desktop sidebar independent of font zoom */
+/* desktop sidebar in flow (sticky, full-viewport) with centered content margins */
 @media(min-width:1025px){
-  .sidebar{position:fixed;left:0;top:0;bottom:0;height:auto;max-height:none;width:242px;overflow-y:auto}
-  .main{margin-left:242px;max-width:calc(100% - 242px)}
+  .sidebar{position:sticky;top:0;height:100dvh;overflow-y:auto}
+  .main{margin:0 auto;padding-left:55px;padding-right:55px}
 }
 
 /* history accordion */
