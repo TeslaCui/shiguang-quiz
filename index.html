@@ -28,19 +28,18 @@
       </div>
     </aside>
     <main class="main">
-      <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">总览</h1></div><div class="top-actions"><button class="help-btn">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout" hidden>退出登录</button></div></header>
+      <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">主页</h1></div><div class="top-actions"><button class="primary top-start" data-view="practice">开始刷题 <span>→</span></button><button class="help-btn">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout" hidden>退出登录</button></div></header>
       <div id="toast" class="toast"></div>
       <div id="file-warning" class="file-warning" hidden>当前是本地文件模式。请使用 HTTPS 网站地址打开，否则题库文件和登录会话可能无法正常读取。</div>
       <section id="home-view" class="view active-view">
         <div class="hero"><div><span class="eyebrow warm">今日学习计划</span><h2>把碎片时间，<em>变成进步。</em></h2><p>每一次练习都算数，今天也为目标前进一点点。</p></div><div class="hero-art"><div class="sun"></div><div class="book">✎</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div></div>
         <div class="smart-strip"><span class="who" id="user-data-label"></span><span>冲刺重点 <b id="core-count">0</b> 题</span><span>到期复习 <b id="due-count">0</b> 题</span><span>薄弱题 <b id="weak-count">0</b> 题</span><span>今日已刷 <b id="today-count">0</b> 题</span></div>
-        <div class="review-task"><div class="rt-info"><b>今日复习任务</b><span>到期 <b id="review-due">0</b> 题 · 薄弱 <b id="review-weak">0</b> 题，答错自动回炉重练</span></div><button class="primary" id="start-review">开始今日复习 <span>→</span></button><div class="rt-done" id="review-done-hint" hidden>今日复习已完成 🎉</div></div>
         <div class="home-grid">
-          <div class="cal-card"><div class="cal-head"><b>本月打卡</b><span id="cal-month"></span></div><div id="calendar"></div><div class="cal-legend"><i></i>已练习</div></div>
-          <div class="home-right">
+          <div class="home-main">
+            <div class="review-task"><div class="rt-info"><b>今日复习任务</b><span>到期 <b id="review-due">0</b> 题 · 薄弱 <b id="review-weak">0</b> 题，答错自动回炉重练</span></div><button class="primary" id="start-review">开始今日复习 <span>→</span></button><div class="rt-done" id="review-done-hint" hidden>今日复习已完成 🎉</div></div>
             <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>累计答题（账号独立）</small><strong id="total-answered">0</strong><span class="trend">进入 → 退出计为一次练习</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">按练习会话统计</span></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><small>连续打卡</small><strong id="streak-count">0</strong><span class="trend">累计打卡 <b id="checkin-count" style="color:inherit">0</b> 天</span></div></div></div>
-            <div class="quick-links"><button class="primary big-cta" data-view="practice">开始刷题 <span>→</span></button><button class="primary ghost" data-view="history">学习记录</button><button class="primary ghost" data-view="bank">我的题库</button></div>
           </div>
+          <div class="cal-card"><div class="cal-head"><b>本月打卡</b><span id="cal-month"></span></div><div id="calendar"></div><div class="cal-legend"><i></i>已练习</div></div>
         </div>
         <div class="section-head recent-head"><div><h3>最近练习</h3><p>温故而知新，继续保持</p></div><button class="text-btn" data-view="history">全部记录 <span>→</span></button></div>
         <div class="recent-list" id="recent-list"><div class="empty-state">还没有练习记录，开始第一题吧。</div></div>

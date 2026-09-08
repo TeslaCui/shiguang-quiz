@@ -101,3 +101,9 @@
 @media(max-width:900px){.home-grid{grid-template-columns:1fr}}@media(max-width:640px){.detail-grid{grid-template-columns:1fr}.home-right .stats{grid-template-columns:repeat(3,1fr)}.home-right .stats .stat-card{flex-direction:column}.cal-cell{padding:6px 0;font-size:11px}}
 
 .quick-links .big-cta{flex:1;min-width:160px;padding:13px 20px;font-size:14px}
+
+/* home two-column equal height & global start */
+.home-grid{grid-template-columns:1.05fr .95fr;margin:6px 0 20px}.home-main{display:flex;flex-direction:column;gap:14px;min-width:0}.home-main .stats{margin:0}.home-main .review-task{margin:0}.cal-card{display:flex;flex-direction:column}.cal-card #calendar{flex:1;display:flex;flex-direction:column;justify-content:center}
+.top-start{padding:8px 15px;font-size:11px;font-weight:600}
+@media(max-width:640px){.top-start{font-size:10px;padding:7px 10px}.help-btn{display:none}.top-actions{gap:8px}}
+@media(max-width:900px){.home-main .stats{grid-template-columns:repeat(3,1fr)}.home-main .stats .stat-card{flex-direction:column;gap:6px}}
