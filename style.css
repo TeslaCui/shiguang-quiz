@@ -146,7 +146,7 @@
 #history-list .recent-row.open{background:#f6f2ff}
 #history-list .recent-row .arr{margin-left:8px;color:#b3aed1;transition:.2s;font-size:14px}
 #history-list .recent-row.open .arr{transform:rotate(180deg);color:var(--purple)}
-.inline-detail{padding:6px 14px 12px;background:#fbfaff;border-top:1px dashed #e5def5}
+}
 
 
 /* history & wrong compact/accordion extras */
