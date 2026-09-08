@@ -96,7 +96,7 @@ function showView(v){
   if(v==='wrong')renderReview();
   if(v==='practice'){if(practiceMode==='reviewDone')practiceMode='free';if(practiceArmed)renderQuestion();else renderSetup()}
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank)selectBank(bank.dataset.bank)});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view);const bank=e.target.closest('[data-bank]');if(bank){activeBank=bank.dataset.bank;showView('bank')}});
 function bankName(q){return q.source&&(/港澳台|文化史|古代文化|pdf|阅读/i.test(q.source))?'中华文化题库':q.source||'未命名题库'}
 function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]??=[]).push(q)});return m}
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
@@ -268,11 +268,13 @@ function renderReviewDone(){
   $('#review-done-free').onclick=()=>{practiceMode='free';ensureSession();renderQuestion()};
 }
 function startReview(){
-  const all=practiceQuestions.filter(q=>!q.needsReview);
-  if(!all.length){toast('题库尚未加载完成，请稍候');return}
+  practiceArmed=true;
+  const groups=bankGroups();const all=(groups[activeBank]||[]).filter(q=>!q.needsReview);
+  practiceQuestions=all;
+  if(!all.length){practiceArmed=false;toast('题库尚未加载完成，请稍候');return}
   const now=Date.now(),st=srsStore().qs;
   const due=all.filter(q=>st[q.id]&&st[q.id].due&&st[q.id].due<=now);
-  if(!due.length){toast('当前没有到期的复习题，可先自由刷题，稍后再开始复习');practiceMode='free';taskIds=[];showView('practice');return}
+  if(!due.length){practiceArmed=false;practiceQuestions=bankQuestions(activeBank);toast('当前没有到期的复习题，可先开始刷题，稍后再复习');practiceMode='free';taskIds=[];showView('practice');return}
   practiceMode='review';taskIds=due.map(q=>q.id);taskTotal=taskIds.length;sessionRecent=[];
   showView('practice');
 }

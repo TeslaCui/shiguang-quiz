@@ -18,9 +18,8 @@
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">✦</div><div><strong>拾光题库</strong><span>STUDY SMARTER</span></div></div>
       <nav>
-        <button class="nav-item active" data-view="home"><span>⌂</span>总览</button>
+        <button class="nav-item" data-view="home"><span>⌂</span>总览</button>
         <button class="nav-item" data-view="bank"><span>▤</span>我的题库</button>
-        <button class="nav-item" data-view="practice"><span>◉</span>开始刷题</button>
         <button class="nav-item" data-view="wrong"><span>⚑</span>错题本</button>
       </nav>
       <div class="sidebar-bottom"><div class="streak"><span class="flame">♨</span><div><b>学习状态</b><small>完成练习后会更新</small></div></div><div class="profile"><div class="avatar">用</div><div><b id="profile-name">未登录</b><small id="profile-email">登录后同步记录</small></div><span class="dots">•••</span></div></div>
@@ -30,7 +29,7 @@
       <div id="toast" class="toast"></div>
       <div id="file-warning" class="file-warning" hidden>当前是本地文件模式。请使用 HTTPS 网站地址打开，否则题库文件和登录会话可能无法正常读取。</div>
       <section id="home-view" class="view active-view">
-        <div class="hero"><div><span class="eyebrow warm">今日学习计划</span><h2>把碎片时间，<em>变成进步。</em></h2><p>每一次练习都算数，今天也为目标前进一点点。</p><button class="primary" data-view="practice">继续刷题 <span>→</span></button></div><div class="hero-art"><div class="sun"></div><div class="book">✎</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div></div>
+        <div class="hero"><div><span class="eyebrow warm">今日学习计划</span><h2>把碎片时间，<em>变成进步。</em></h2><p>每一次练习都算数，今天也为目标前进一点点。</p><button class="primary hero-start" data-view="practice">开始刷题 <span>→</span></button></div><div class="hero-art"><div class="sun"></div><div class="book">✎</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div></div>
         <div class="smart-strip"><span class="who" id="user-data-label"></span><span>冲刺重点 <b id="core-count">0</b> 题</span><span>到期复习 <b id="due-count">0</b> 题</span><span>薄弱题 <b id="weak-count">0</b> 题</span><span>今日已刷 <b id="today-count">0</b> 题</span></div>
         <div class="review-task"><div class="rt-info"><b>今日复习任务</b><span>到期 <b id="review-due">0</b> 题 · 薄弱 <b id="review-weak">0</b> 题，答错自动回炉重练</span></div><button class="primary" id="start-review">开始今日复习 <span>→</span></button><div class="rt-done" id="review-done-hint" hidden>今日复习已完成 🎉</div></div>
         <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>累计答题（账号独立）</small><strong id="total-answered">0</strong><span class="trend">进入 → 退出计为一次练习</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">按练习会话统计</span></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><small>连续打卡</small><strong id="streak-count">0</strong><span class="trend">累计打卡 <b id="checkin-count" style="color:inherit">0</b> 天</span></div></div></div>
@@ -38,7 +37,7 @@
         <div id="analysis-area" class="analysis"><div class="empty-state">完成几次练习后，这里会显示学习分析。</div></div>
         <div class="section-head"><div><h3>我的题库 <span class="count" id="bank-count">3</span></h3><p>管理你的专属知识空间</p></div><button class="text-btn" data-view="bank">查看全部 <span>→</span></button></div>
         <div class="bank-grid" id="home-banks"></div>
-        <div class="section-head recent-head"><div><h3>最近练习</h3><p>温故而知新，继续保持</p></div><button class="text-btn" data-view="practice">练习记录 <span>→</span></button></div>
+        <div class="section-head recent-head"><div><h3>最近练习</h3><p>温故而知新，继续保持</p></div><button class="text-btn" data-view="wrong">全部记录 <span>→</span></button></div>
         <div class="recent-list" id="recent-list"><div class="empty-state">还没有练习记录，开始第一题吧。</div></div>
       </section>
       <section id="bank-view" class="view"><div class="view-title"><div><span class="eyebrow">YOUR COLLECTION</span><h2>我的题库</h2><p>上传资料，自动整理成你的专属题库。</p></div><button class="primary" id="upload-trigger">＋ 上传文件</button></div><div class="upload-zone" id="upload-zone"><div class="upload-cloud">↑</div><h3>拖拽文件到这里，或点击上传</h3><p>支持 TXT、Markdown、Word、Excel、PPT、PDF、CSV、JSON、HTML 等格式，可一次选择多个文件</p><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.html,.htm,.xml,.yaml,.yml,.log" hidden><button class="outline" id="choose-file">选择文件</button></div><div class="section-head bank-all-head"><div><h3>全部题库 <span class="count" id="bank-count-all">3</span></h3></div><div class="filters"><button class="filter active">全部</button><button class="filter">最近使用</button></div></div><div class="bank-grid all-grid" id="all-banks"></div></section>
@@ -51,7 +50,6 @@
   <nav class="mobile-nav" aria-label="主导航">
     <button class="nav-item active" data-view="home"><span>⌂</span>总览</button>
     <button class="nav-item" data-view="bank"><span>▤</span>题库</button>
-    <button class="nav-item" data-view="practice"><span>◉</span>刷题</button>
     <button class="nav-item" data-view="wrong"><span>⚑</span>记录</button>
   </nav>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="app.js"></script>
