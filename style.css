@@ -223,3 +223,10 @@
 .rd-side .rd-qmeta{font-size:12px;color:var(--purple);font-weight:700;margin-bottom:10px}
 .rd-mini{font-size:11px;color:#aaa5b3;text-align:center;margin-top:8px}
 @media(max-width:1024px){.rd-layout{grid-template-columns:1fr}.rd-article{position:static}.rd-titlecard+.rd-mat{max-height:36vh}}
+
+/* reading final layout: article on top, questions below with prev/next */
+.rd-layout{grid-template-columns:1fr!important;display:grid}
+.rd-article{position:static!important;order:1}
+.rd-side{order:2}
+.rd-titlecard+.rd-mat{max-height:46vh}
+@media(max-width:640px){.rd-titlecard+.rd-mat{max-height:38vh}}

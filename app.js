@@ -901,7 +901,7 @@ function submitReading(){
 /* ============ 阅读试卷 v3：左文章右题目，逐题切换，整篇合并材料 ============ */
 function mergedMat(items){
   const seen=new Set(),parts=[];
-  items.forEach(q=>{const {mat}=splitQ(q);if(mat&&!seen.has(mat)){seen.add(mat);parts.push(mat)}});
+  items.forEach(it=>{const q=it.q||it;const {mat}=splitQ(q);if(mat&&!seen.has(mat)){seen.add(mat);parts.push(mat)}});
   return parts.join('\n\n');
 }
 function renderReadingSheet(){
