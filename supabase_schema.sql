@@ -10,3 +10,10 @@ create policy "own profile" on profiles for all using (auth.uid()=user_id) with 
 create or replace function lookup_login_email(p_identifier text) returns text language sql security definer set search_path=public as $$ select email from profiles where lower(username)=lower(trim(p_identifier)) or regexp_replace(coalesce(phone,''),'[^0-9+]','','g')=regexp_replace(trim(p_identifier),'[^0-9+]','','g') limit 1 $$;
 revoke all on function lookup_login_email(text) from public;
 grant execute on function lookup_login_email(text) to anon,authenticated;
+
+-- 用户学习状态（遗忘曲线调度）。在 Supabase SQL Editor 中执行本文件全量内容；
+-- 前端在表尚未创建时会自动降级为浏览器本地调度，建表后可跨设备同步复习计划。
+create table if not exists review_state (user_id uuid references auth.users not null,question_id text not null,box int not null default 0,due_at timestamptz,wrong int not null default 0,ok_count int not null default 0,updated_at timestamptz default now(),primary key (user_id,question_id));
+alter table review_state enable row level security;
+create policy "own review state" on review_state for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create index if not exists review_state_user_due_idx on review_state(user_id,due_at);
