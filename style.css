@@ -107,3 +107,18 @@
 .top-start{padding:8px 15px;font-size:11px;font-weight:600}
 @media(max-width:640px){.top-start{font-size:10px;padding:7px 10px}.help-btn{display:none}.top-actions{gap:8px}}
 @media(max-width:900px){.home-main .stats{grid-template-columns:repeat(3,1fr)}.home-main .stats .stat-card{flex-direction:column;gap:6px}}
+
+/* ====== latest tweaks: sticky sidebar, tablet bottom nav, help, timer, clickable ====== */
+.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto}
+@media(max-width:1024px){
+  .sidebar{display:none!important}
+  .mobile-nav{display:flex!important}
+  .main{padding:16px 12px 94px}
+}
+@media(min-width:1025px){.mobile-nav{display:none!important}}
+.recent-row.clickable{cursor:pointer}.recent-row.clickable:hover{background:#faf9ff}
+.q-timers{color:#8e8a9f;font-size:11px;white-space:nowrap}.q-timers b{color:var(--purple);font-variant-numeric:tabular-nums}
+.detail-note{background:#fff7f3;border:1px solid #f6d9cc;border-radius:10px;padding:12px 14px;font-size:12px;color:#9a6a55;margin-top:14px;max-width:780px}
+.help-modal{position:fixed;inset:0;background:#201a3288;display:grid;place-items:center;z-index:12}.help-modal[hidden]{display:none}
+.help-panel{width:min(640px,calc(100vw - 30px));background:#fff;border-radius:16px;padding:26px 28px;box-shadow:0 20px 60px #21183b33;position:relative;max-height:88vh;overflow:auto}.help-panel h2{margin:8px 0 6px;font-size:21px}
+.help-body{margin-top:14px}.help-sec{border-bottom:1px solid var(--line);padding:12px 0}.help-sec:last-child{border:0}.help-sec b{font-size:13px;color:var(--purple)}.help-sec p{font-size:12px;line-height:1.9;color:#55506b;margin:6px 0 0}

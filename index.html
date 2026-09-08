@@ -28,7 +28,7 @@
       </div>
     </aside>
     <main class="main">
-      <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">主页</h1></div><div class="top-actions"><button class="primary top-start" data-view="practice">开始刷题 <span>→</span></button><button class="help-btn">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout" hidden>退出登录</button></div></header>
+      <header class="topbar"><div><span class="eyebrow" id="today-label">今日学习</span><h1 id="page-title">主页</h1></div><div class="top-actions"><button class="help-btn" id="help-open">? 使用说明</button><button class="auth-btn" id="auth-open">登录 / 注册</button></div></header>
       <div id="toast" class="toast"></div>
       <div id="file-warning" class="file-warning" hidden>当前是本地文件模式。请使用 HTTPS 网站地址打开，否则题库文件和登录会话可能无法正常读取。</div>
       <section id="home-view" class="view active-view">
@@ -36,7 +36,7 @@
         <div class="smart-strip"><span class="who" id="user-data-label"></span><span>冲刺重点 <b id="core-count">0</b> 题</span><span>到期复习 <b id="due-count">0</b> 题</span><span>薄弱题 <b id="weak-count">0</b> 题</span><span>今日已刷 <b id="today-count">0</b> 题</span></div>
         <div class="home-grid">
           <div class="home-main">
-            <div class="review-task"><div class="rt-info"><b>今日复习任务</b><span>到期 <b id="review-due">0</b> 题 · 薄弱 <b id="review-weak">0</b> 题，答错自动回炉重练</span></div><button class="primary" id="start-review">开始今日复习 <span>→</span></button><div class="rt-done" id="review-done-hint" hidden>今日复习已完成 🎉</div></div>
+            <div class="review-task"><div class="rt-info"><b>开始刷题</b><span>到期复习 <b id="review-due">0</b> · 薄弱 <b id="review-weak">0</b> · 按遗忘曲线优先出现</span></div><button class="primary" id="main-go">开始刷题 <span>→</span></button></div>
             <div class="stats"><div class="stat-card"><span class="stat-icon purple">◷</span><div><small>累计答题（账号独立）</small><strong id="total-answered">0</strong><span class="trend">进入 → 退出计为一次练习</span></div></div><div class="stat-card"><span class="stat-icon green">♧</span><div><small>正确率</small><strong id="accuracy">暂无</strong><span class="trend">按练习会话统计</span></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><small>连续打卡</small><strong id="streak-count">0</strong><span class="trend">累计打卡 <b id="checkin-count" style="color:inherit">0</b> 天</span></div></div></div>
           </div>
           <div class="cal-card"><div class="cal-head"><b>本月打卡</b><span id="cal-month"></span></div><div id="calendar"></div><div class="cal-legend"><i></i>已练习</div></div>
@@ -59,11 +59,20 @@
     </main>
   </div>
   <div class="auth-modal" id="auth-modal" hidden><div class="auth-panel"><button class="auth-close" id="auth-close">×</button><span class="eyebrow">YOUR ACCOUNT</span><h2 id="auth-title">登录拾光题库</h2><p id="auth-subtitle">使用手机号和密码登录。</p><div class="auth-divider"><span id="auth-divider-text">手机号登录</span></div><input id="auth-identifier" type="text" placeholder="邮箱 / 手机号 / 用户名" autocomplete="username"><input id="auth-username" type="text" placeholder="用户名（用于登录）" autocomplete="nickname" hidden><input id="auth-email" type="email" placeholder="邮箱" autocomplete="email" hidden><input id="auth-phone" type="tel" placeholder="手机号（选填）" autocomplete="tel" hidden><input id="auth-password" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password"><input id="auth-confirm" type="password" placeholder="确认密码" autocomplete="new-password" hidden><button class="primary auth-submit" id="auth-submit">登录</button><button class="text-btn auth-switch" id="auth-switch">没有账号？注册</button><div class="auth-message" id="auth-message"></div></div></div>
+  <div class="help-modal" id="help-modal" hidden><div class="help-panel"><button class="auth-close" id="help-close">×</button><span class="eyebrow">GUIDE</span><h2>使用说明</h2>
+    <div class="help-body">
+      <div class="help-sec"><b>① 开始刷题</b><p>点击主页「开始刷题」→ 选择题库 → 选择题型（选择填空 / 阅读·文言文 / 阅读·白话文 / 混合），开始后题目按遗忘曲线智能排序：到期复习优先，薄弱错题会高频重现。</p></div>
+      <div class="help-sec"><b>② 答题与解析</b><p>单选题/判断题/多选题点击选项作答（多选先勾选全部正确项再“提交答案”）；填空题先“显示答案”后自评。作答后展开三段：参考译文（阅读题）· 解析 · 文化知识补充，右上角计时会记录总用时与本题用时。</p></div>
+      <div class="help-sec"><b>③ 错题与复习</b><p>答错的题自动进入错题本并回炉重练；主页显示到期复习与薄弱题数，可随时用「开始刷题」优先巩固。</p></div>
+      <div class="help-sec"><b>④ 历史与数据</b><p>「历史刷题」可查看每场练习：总用时、题数、正确率，展开可看逐题作答与对错；上方图表实时展示近 7 日趋势、分题型正确率与薄弱点。</p></div>
+      <div class="help-sec"><b>⑤ 打卡</b><p>主页“本月打卡”月历每天完成练习即点亮，用于追踪学习连续性。</p></div>
+      <div class="help-sec"><b>⑥ 账号与设置</b><p>左（上）下方「我的」进入账号与设置：可修改用户名/手机号、调整字体大小、清除本机数据、退出登录。登录后记录跨设备同步（需先执行仓库中的 supabase_schema.sql）。</p></div>
+    </div></div></div>
   <nav class="mobile-nav" aria-label="主导航">
     <button class="nav-item active" data-view="home"><span>⌂</span>主页</button>
     <button class="nav-item" data-view="history"><span>◷</span>历史</button>
     <button class="nav-item" data-view="bank"><span>▤</span>题库</button>
-    <button class="nav-item" data-view="settings"><span>☰</span>账号</button>
+    <button class="nav-item" data-view="settings"><span>☰</span>我的</button>
   </nav>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="app.js"></script>
   <script>if('serviceWorker' in navigator && location.protocol !== 'file:'){navigator.serviceWorker.register('sw.js').catch(()=>{});}</script>
