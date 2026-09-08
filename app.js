@@ -113,6 +113,19 @@ function questionHtml(q){
   return `<h3>${esc(t)}</h3>`;
 }
 const shortQ=(t)=>{const s=String(t||'');const j=s.indexOf('【小题】');const x=j>=0?s.slice(j+4):s;return x.length>86?x.slice(0,86)+'…':x};
+function explainHtml(q){
+  const parts=[];
+  if(q.translation&&q.translation.trim())parts.push(`<b>参考译文</b> ${esc(q.translation)}`);
+  parts.push(`<b>解析</b> ${esc(q.explanation||'本题解析见来源资料。')}`);
+  const cult=(q.culture&&q.culture.trim())
+    ?q.culture
+    :(q.type==='judge'?'判断题重在辨析题干中人物、朝代、作品归属是否错位，可对照同主题单选巩固。'
+      :q.type==='fill'?'填空题以识记专名为主（人名/篇名/朝代/地点），注意用字规范。'
+      :q.type==='multiple'?'多选题需逐项判定正误：选项常含“年代错位、归属错位、概念偷换”三类陷阱。'
+      :'复习建议：围绕本题涉及的人物、时代、作品与制度做纵向关联记忆，可在冲刺重点中巩固同类题。');
+  parts.push(`<b>文化知识补充</b> ${esc(cult)}`);
+  return parts.join('<br>');
+}
 function bankQuestions(name){const groups=bankGroups();return (groups[name]||[]).filter(q=>!q.needsReview&&(practiceCat==='all'||catOf(q)===practiceCat))}
 function setCat(cat){
   if(cat===practiceCat)return;
@@ -195,7 +208,7 @@ function renderQuestion(){
       $('#reveal-answer').hidden=true;
       const ans=q.answerText||(q.options&&q.options[0])||'（无答案）';
       const tip=$('#answer-tip');tip.textContent=`参考答案：${ans}`;tip.style.color='#58a879';
-      const ex=$('#explanation');ex.hidden=false;ex.innerHTML=`<b>解析</b> ${esc(q.explanation||'原始题库未提供解析。')}`;
+      const ex=$('#explanation');ex.hidden=false;ex.innerHTML=explainHtml(q);
       const fs=$('#fill-self');fs.hidden=false;
       fs.innerHTML=`<div style="font-size:11px;color:#8e8a9f;margin-bottom:10px">这道填空题你答对了吗？</div><button class="primary" id="self-correct" style="margin-right:10px">答对了 ✓</button><button class="next-btn" id="self-wrong" style="background:#df8065">答错了 ✗</button>`;
       $('#self-correct').onclick=()=>finishQuestion(true,q);
@@ -250,7 +263,7 @@ function finishQuestion(ok,q){
   tip.textContent=ok?'回答正确！继续保持 ✨':`回答错误，正确答案是 ${expText}`;
   tip.style.color=ok?'#58a879':'#df8065';
   const ex=$('#explanation');ex.hidden=false;
-  ex.innerHTML=`<b>解析</b> ${esc(q.explanation||'原始题库未提供解析。')}<br><b>文化知识补充</b> 建议结合时代背景、制度沿革、思想流派与代表人物复习。`;
+  ex.innerHTML=explainHtml(q);
   const sm=$('#submit-multi');if(sm)sm.hidden=true;
   const self=$('#fill-self');if(self)self.hidden=true;
   const next=$('#next-question');if(next){next.hidden=false;next.onclick=nextQuestion}
