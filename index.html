@@ -23,6 +23,7 @@
         <button class="nav-item" data-view="bank"><span>▤</span>我的题库</button>
       </nav>
       <div class="sidebar-bottom">
+        <div class="ver-line">拾光题库 · 版本 <b id="ver-tag">…</b><span class="ver-new" id="ver-new" hidden>· 有新版本</span></div>
         <button class="profile" id="account-open" data-view="settings" title="账号与设置（右键更多）"><div class="avatar">用</div><div><b id="profile-name">未登录</b><small id="profile-email">登录后同步记录</small></div><span class="dots">•••</span></button>
         <div class="ctx-menu" id="account-menu" hidden><button id="ctx-settings">账号与设置</button><button id="ctx-logout">退出登录</button></div>
       </div>
@@ -50,7 +51,7 @@
         <div class="settings-wrap">
           <div class="set-card"><h4>账号信息</h4><div id="set-account"></div></div>
           <div class="set-card"><h4>界面设置</h4><div class="set-row"><span>字体大小</span><div class="font-btns" id="font-btns"><button data-fs="14">小</button><button data-fs="16" class="on">中</button><button data-fs="18">大</button></div></div><div class="set-hint">修改后立即生效，随账号保存</div></div>
-          <div class="set-card"><h4>数据与登录</h4><div class="set-row"><button class="outline" id="reset-local">清除本机练习数据</button></div><div class="set-row"><button class="auth-btn" id="auth-open2">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout2" hidden>退出登录</button></div></div>
+          <div class="set-card"><h4>数据与登录</h4><div class="set-row"><span>当前版本</span><b id="ver-tag2">检测中…</b><button class="filter" id="check-update">检查更新</button></div><div class="set-row"><button class="outline" id="reset-local">清除本机练习数据</button></div><div class="set-row"><button class="auth-btn" id="auth-open2">登录 / 注册</button><button class="auth-btn signed-in" id="auth-logout2" hidden>退出登录</button></div></div>
         </div>
       </section>
       <section id="bank-view" class="view"><div class="view-title"><div><span class="eyebrow">YOUR COLLECTION</span><h2>我的题库</h2><p>点击题库可查看详情、已刷进度与开始练习。</p></div><button class="primary" id="upload-trigger">＋ 上传文件</button></div><div class="upload-zone" id="upload-zone"><div class="upload-cloud">↑</div><h3>拖拽文件到这里，或点击上传</h3><p>支持 TXT、Markdown、Word、Excel、PPT、PDF、CSV、JSON、HTML 等格式，可一次选择多个文件</p><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.html,.htm,.xml,.yaml,.yml,.log" hidden><button class="outline" id="choose-file">选择文件</button></div><div class="section-head bank-all-head"><div><h3>全部题库 <span class="count" id="bank-count-all">3</span></h3></div></div><div class="bank-grid all-grid" id="all-banks"></div></section>

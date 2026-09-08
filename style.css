@@ -174,3 +174,5 @@
 @media(min-width:901px){
   .home-grid{grid-template-columns:1.05fr .95fr}
 }
+
+.ver-line{font-size:10px;color:#aaa5b3;padding:8px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}.ver-line b{color:#8a84b0}.ver-new{color:#df8065;font-weight:700}
