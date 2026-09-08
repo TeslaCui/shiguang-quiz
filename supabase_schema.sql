@@ -17,3 +17,10 @@ create table if not exists review_state (user_id uuid references auth.users not 
 alter table review_state enable row level security;
 create policy "own review state" on review_state for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
 create index if not exists review_state_user_due_idx on review_state(user_id,due_at);
+
+-- 练习会话记录（进入->退出为一次），用于主页累计答题/正确率/打卡统计。
+-- 未执行本段前，前端降级为仅本地记录会话。
+create table if not exists practice_sessions (id bigint generated always as identity primary key,user_id uuid references auth.users not null,bank text not null default '中华文化知识库',started_at timestamptz not null,ended_at timestamptz not null,duration_sec int not null default 0,q_count int not null default 0,correct int not null default 0,created_at timestamptz default now());
+alter table practice_sessions enable row level security;
+create policy "own practice sessions" on practice_sessions for all using (auth.uid()=user_id) with check (auth.uid()=user_id);
+create index if not exists practice_sessions_user_start_idx on practice_sessions(user_id,started_at);
