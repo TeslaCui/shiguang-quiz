@@ -278,17 +278,25 @@ function toggleWrong(row){
 }
 function renderWrong(){
   const w=read('wrong-questions'),d=read('details');
-  const stat={};
-  d.forEach(x=>{if(x.ok)return;const e=stat[x.qid]||(stat[x.qid]={n:0,last:0});e.n++;if(x.ts>e.last)e.last=x.ts});
-  const rows=w.map(q=>{const s=stat[q.id]||{n:0,last:0};return {q,n:s.n,last:s.last}});
-  rows.sort(wrongSort==='most'?(a,b)=>b.n-a.n||b.last-a.last:(a,b)=>b.last-a.last||b.n-a.n);
+  const by={};
+  d.forEach(x=>{if(!by[x.qid])by[x.qid]=[];by[x.qid].push(x)});
+  const rows=w.map(q=>{
+    const arr=by[q.id]||[];const fails=arr.filter(x=>!x.ok).length;
+    const last=arr[arr.length-1];
+    return {q,n:fails,last:last?last.ts:0,mastered:!!(q.masteredAt||(last&&last.ok&&fails>0))};
+  });
+  rows.sort((a,b)=>{
+    if(a.mastered!==b.mastered)return a.mastered?1:-1;
+    return wrongSort==='most'?(b.n-a.n||b.last-a.last):(b.last-a.last||b.n-a.n);
+  });
   $('#wrong-count')&&($('#wrong-count').textContent=rows.length);
-  $('#wrong-list').innerHTML=rows.length?rows.map(({q,n})=>{
+  $('#wrong-list').innerHTML=rows.length?rows.map(({q,n,mastered})=>{
     const rchip=q.rType==='classical'?'文言阅读':q.rType==='modern'?'白话阅读':(q.source&&q.source.includes('阅读题')?'阅读':null);
-    return `<div class="hist-item"><div class="recent-row wrong-row" data-id="${esc(q.id)}"><span class="mini-icon pink">⚑</span>${rchip?`<span class="q-badge ${q.rType==='modern'?'b-modern':'b-classical'}" style="font-size:10px;padding:2px 8px">${rchip}</span>`:''}<div class="wrong-body"><b>${esc(shortQ(q.question))}</b></div><span class="wcount">错 ${n} 次</span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
-  }).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
+    return `<div class="hist-item"><div class="recent-row wrong-row ${mastered?'mastered':''}" data-id="${esc(q.id)}"><span class="mini-icon pink">⚑</span>${rchip?`<span class="q-badge ${q.rType==='modern'?'b-modern':'b-classical'}" style="font-size:10px;padding:2px 8px">${rchip}</span>`:''}<div class="wrong-body"><b>${esc(shortQ(q.question))}</b>${mastered?'<small style="color:#58a879">已掌握 · 最近一次答对</small>':'<small style="color:#df8065">待巩固 · 最近一次答错</small>'}</div><span class="wcount">错 ${n} 次</span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
+  }).join(''):'<div class="empty-state">还没有错题记录。答错的题会永久保存在这里，答对后标记为已掌握。</div>';
   $$('#wrong-list .wrong-row').forEach(r=>r.onclick=()=>toggleWrong(r));
 }
+
 function renderHistoryList(){
   const ses=read('sessions');
   const _rd=read('details');const _rc={};_rd.forEach(v=>{if(v.kind==='classical'||v.kind==='modern'||v.kind==='reading')_rc[v.start]=(_rc[v.start]||0)+1});
@@ -433,7 +441,7 @@ async function answer(btn,q,fill){
   finishQuestion(ok,q,chosenTxt);
 }
 function wrongListAdd(q){const w=read('wrong-questions');if(!w.some(x=>x.id===q.id))w.push(q);write('wrong-questions',w)}
-function wrongListRemove(qid){write('wrong-questions',read('wrong-questions').filter(x=>x.id!==qid))}
+function wrongListRemove(qid){const w=read('wrong-questions');const hit=w.find(x=>x.id===qid);if(hit&&!hit.masteredAt){hit.masteredAt=Date.now();write('wrong-questions',w)}}
 function recordAnswer(q,ok,chosen){
   ensureSession();
   const d=read('details');const now=Date.now();
@@ -1001,3 +1009,4 @@ function matHtml(mat){
 }
 
 function rdCnt(start){let c=0;let arr=[];try{arr=JSON.parse(localStorage.getItem('sg:anon:details')||'[]')}catch(e){}for(const v of arr){if((v.kind==='classical'||v.kind==='modern'||v.kind==='reading')&&v.start===start)c++}return c||0}
+

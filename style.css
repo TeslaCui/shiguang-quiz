@@ -230,3 +230,4 @@
 .rd-side{order:2}
 .rd-titlecard+.rd-mat{max-height:46vh}
 @media(max-width:640px){.rd-titlecard+.rd-mat{max-height:38vh}}
+.wrong-body small{display:block;margin-top:3px;font-size:11px}
