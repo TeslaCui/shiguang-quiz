@@ -9,7 +9,7 @@ const norm = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
 
 let bank = JSON.parse(await fs.readFile(jsonPath, "utf8"));
 // idempotent: drop any previously merged 教材命题 records
-const official = bank.filter((q) => q.source !== "中国文化史概要·教材命题");
+const official = bank.filter((q) => q.source === "2023港澳台中华文化知识大赛");
 const extraFiles = (await fs.readdir(`${dir}/outputs`)).filter((f) => f.startsWith("scratch_vision_q") && f.endsWith(".json")).sort().map((f) => `${dir}/outputs/${f}`);
 const extra = [];
 for (const f of extraFiles) {
