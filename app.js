@@ -102,6 +102,17 @@ function bankGroups(){const m={};questions.forEach(q=>{const n=bankName(q);(m[n]
 function card(name,qs){const isCulture=name==='中华文化题库';return `<article class="bank-card" data-bank="${esc(name)}"><div class="bank-top"><span class="book-icon blue">${isCulture?'文':'✦'}</span><span class="card-arrow">↗</span></div><h4>${esc(name)}</h4><small>${qs.length} 道题 · ${isCulture?'港澳台考研中华文化':'用户上传题库'}</small></article>`}
 function renderBanks(){const groups=bankGroups(),names=Object.keys(groups),h=names.length?names.map(n=>card(n,groups[n])).join(''):'<div class="empty-state">题库正在加载。</div>';$('#home-banks').innerHTML=h;$('#all-banks').innerHTML=h;$('#bank-count').textContent=names.length;$('#bank-count-all').textContent=names.length;if($('#bank-total'))$('#bank-total').textContent=questions.length}
 const catOf=(q)=>q.source&&q.source.includes('阅读题')?'reading':'choice';
+function questionHtml(q){
+  const t=q.question||'';
+  const i=t.indexOf('【阅读材料】'),j=t.indexOf('【小题】');
+  if(i>=0&&j>i){
+    const mat=t.slice(i+6,j).trim();
+    const sub=t.slice(j).replace(/^【小题】/,'').trim();
+    return `<div class="reading-mat">${esc(mat)}</div><h3 style="margin-top:14px">${esc(sub)}</h3>`;
+  }
+  return `<h3>${esc(t)}</h3>`;
+}
+const shortQ=(t)=>{const s=String(t||'');const j=s.indexOf('【小题】');const x=j>=0?s.slice(j+4):s;return x.length>86?x.slice(0,86)+'…':x};
 function bankQuestions(name){const groups=bankGroups();return (groups[name]||[]).filter(q=>!q.needsReview&&(practiceCat==='all'||catOf(q)===practiceCat))}
 function setCat(cat){
   if(cat===practiceCat)return;
@@ -136,7 +147,7 @@ function updateStats(){
 }
 function renderReview(){
   const w=read('wrong-questions'),ses=read('sessions');
-  $('#wrong-list').innerHTML=w.length?w.slice().reverse().map(q=>`<div class="recent-row"><span class="mini-icon pink">⚑</span><div><b>${esc(q.question)}</b><small>答案：${q.answer||'见题目'} · ${q.explanation||'暂无解析'}</small></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
+  $('#wrong-list').innerHTML=w.length?w.slice().reverse().map(q=>`<div class="recent-row"><span class="mini-icon pink">⚑</span><div><b>${esc(shortQ(q.question))}</b><small>答案：${q.answer||'见题目'} · ${q.explanation||'暂无解析'}</small></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
   const fmt=(x)=>`<div class="recent-row"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
   $('#history-list').innerHTML=ses.length?ses.slice().reverse().map(fmt).join(''):'<div class="empty-state">完成一次练习后，这里会显示记录。</div>';
 }
@@ -175,8 +186,7 @@ function renderQuestion(){
   const meta=`<div class="question-meta"><span class="tag">${esc(activeBank)}</span><span>${practiceMeta(label)}</span></div>`;
   answered=false;
   if(fill){
-    $('#practice-card').innerHTML=meta+`<h3>${esc(q.question)}</h3>
-      <div class="answer-tip" id="answer-tip"></div>
+    $('#practice-card').innerHTML=meta+questionHtml(q)+`      <div class="answer-tip" id="answer-tip"></div>
       <div id="fill-area" style="margin:4px 0 12px"><button class="outline" id="reveal-answer">显示答案</button></div>
       <div class="explanation" id="explanation" hidden></div>
       <div id="fill-self" hidden></div>
@@ -192,8 +202,7 @@ function renderQuestion(){
       $('#self-wrong').onclick=()=>finishQuestion(false,q);
     };
   }else if(multi){
-    $('#practice-card').innerHTML=meta+`<h3>${esc(q.question)}</h3>
-      <div class="options">${(q.options||[]).map((o,i)=>`<button data-i="${i}"><i>${String.fromCharCode(65+i)}</i> ${esc(o)}</button>`).join('')}</div>
+    $('#practice-card').innerHTML=meta+questionHtml(q)+`      <div class="options">${(q.options||[]).map((o,i)=>`<button data-i="${i}"><i>${String.fromCharCode(65+i)}</i> ${esc(o)}</button>`).join('')}</div>
       <div class="answer-tip" id="answer-tip"></div>
       <div class="explanation" id="explanation" hidden></div>
       <button class="primary" id="submit-multi" style="margin-top:14px">提交答案</button>
@@ -202,8 +211,7 @@ function renderQuestion(){
     $('#submit-multi').onclick=()=>answer(null,q,false);
   }else{
     const os=(q.options&&q.options.length)?q.options:(q.type==='judge'?['正确','错误']:['正确','错误']);
-    $('#practice-card').innerHTML=meta+`<h3>${esc(q.question)}</h3>
-      <div class="options">${os.map((o,i)=>`<button data-i="${i}"><i>${String.fromCharCode(65+i)}</i> ${esc(o)}</button>`).join('')}</div>
+    $('#practice-card').innerHTML=meta+questionHtml(q)+`      <div class="options">${os.map((o,i)=>`<button data-i="${i}"><i>${String.fromCharCode(65+i)}</i> ${esc(o)}</button>`).join('')}</div>
       <div class="answer-tip" id="answer-tip"></div>
       <div class="explanation" id="explanation" hidden></div>
       <button class="next-btn" id="next-question" hidden>下一题 <span>→</span></button>`;
