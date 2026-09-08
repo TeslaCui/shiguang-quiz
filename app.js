@@ -477,8 +477,7 @@ function renderAccountPanel(){
 function applyFont(px){
   px=Number(px)||16;
   const r=px/16;
-  document.documentElement.style.fontSize='100%';
-  document.body.style.zoom=r;
+  document.documentElement.style.zoom=r;
   const s=read('settings',{});s.font=px;write('settings',s);
   $$('#font-btns button').forEach(b=>b.classList.toggle('on',Number(b.dataset.fs)===px));
 }
