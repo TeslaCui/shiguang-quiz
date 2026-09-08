@@ -897,3 +897,75 @@ function submitReading(){
   const end=$('#rd-end');if(end)end.onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;showView('home');toast('已结束阅读练习')};
   updateStats();
 }
+
+/* ============ 阅读试卷 v3：左文章右题目，逐题切换，整篇合并材料 ============ */
+function mergedMat(items){
+  const seen=new Set(),parts=[];
+  items.forEach(q=>{const {mat}=splitQ(q);if(mat&&!seen.has(mat)){seen.add(mat);parts.push(mat)}});
+  return parts.join('\n\n');
+}
+function renderReadingSheet(){
+  const p=rCur,key=p.key,n=p.items.length;
+  const first=p.items[0].q;
+  const mat=mergedMat(p.items);
+  const renderQ=()=>{
+    const it=p.items[p.idx],q=it.q,{sub}=splitQ(q);
+    const opts=(q.options||[]).map((o,j)=>{const L=String.fromCharCode(65+j);return `<button class="${it.sel===L?'selected':''}" data-l="${L}"><i>${L}</i> ${esc(o)}</button>`}).join('');
+    const done=p.items.filter(x=>x.sel!=null).length;
+    return `<div class="rd-qmeta">第 ${p.idx+1} 题 / 共 ${n} 题</div>
+      <div class="rd-qtext">${esc(sub)}</div>
+      <div class="options">${opts}</div>
+      <div class="rd-nav">
+        <button class="outline" id="rd-prev" ${p.idx===0?'disabled':''}>‹ 上一题</button>
+        <button class="outline" id="rd-next" ${p.idx>=n-1?'disabled':''}>下一题 ›</button>
+      </div>
+      <button class="primary" id="rd-submit" style="width:100%;margin-top:12px" ${done<n?'disabled':''}>提交批改（${done}/${n}）</button>
+      <div class="rd-mini">已答：${done} / ${n} · 可随时改选，全部答完后再提交</div>`;
+  };
+  $('#practice-card').innerHTML=`
+    <div class="question-meta"><span class="tag">${esc(activeBank)}</span><span class="q-badge ${first.rType==='modern'?'b-modern':'b-classical'}">阅读 · ${first.rType==='modern'?'白话文':'文言文'}</span><span class="q-timers">总用时 <b id="time-total">0:00</b></span></div>
+    <div class="rd-layout">
+      <div class="rd-article">
+        <div class="rd-titlecard"><b>《${esc(key)}》</b><span>${first.rType==='modern'?'白话文 · 整篇':'文言文'} · 共 ${n} 小题</span></div>
+        ${matHtml(mat)}
+      </div>
+      <div class="rd-side" id="rd-side">${renderQ()}</div>
+    </div>`;
+  const paint=()=>{const side=$('#rd-side');if(side)side.innerHTML=renderQ();bindQ()};
+  const bindQ=()=>{
+    $$('#rd-side .options button').forEach(b=>b.onclick=()=>{const it=p.items[p.idx];it.sel=b.dataset.l;$$('#rd-side .options button').forEach(x=>x.classList.toggle('selected',x===b));refreshDone()});
+    const prev=$('#rd-prev'),next=$('#rd-next');
+    if(prev)prev.onclick=()=>{if(p.idx>0){p.idx--;qStart=Date.now();paint()}};
+    if(next)next.onclick=()=>{if(p.idx<p.items.length-1){p.idx++;qStart=Date.now();paint()}};
+    const sb=$('#rd-submit');if(sb)sb.onclick=()=>{const un=p.items.filter(x=>x.sel==null).length;if(un>0){toast(`还有 ${un} 题未作答`);return}submitReading()};
+  };
+  const refreshDone=()=>{const done=p.items.filter(x=>x.sel!=null).length;const sb=$('#rd-submit');if(sb){sb.disabled=done<n;sb.textContent=`提交批改（${done}/${n}）`}};
+  bindQ();
+}
+function submitReading(){
+  const p=rCur;if(!p)return;
+  let okN=0;
+  p.items.forEach(it=>{const q=it.q,L=String(q.answer||'A').toUpperCase();const ok=it.sel===L;it.ok=ok;if(ok)okN++;recordReadingAnswer(q,ok,it.sel||'')});
+  const n=p.items.length,pct=Math.round(okN/n*100);
+  const rows=p.items.map((it,i)=>{
+    const q=it.q,{sub}=splitQ(q);
+    const showSel=it.sel?`${it.sel}. ${esc((q.options||[])[it.sel.charCodeAt(0)-65]||'')}`:'（未作答）';
+    const showAns=`${q.answer}. ${esc((q.options||[])[String(q.answer).charCodeAt(0)-65]||'')}`;
+    return `<div class="hist-q ${it.ok?'ok':'no'}"><div class="hq-head"><b>第 ${i+1} 题</b><span class="hq-res">${it.ok?'答对 ✓':'答错 ✗'}</span></div><div class="hq-q">${esc(sub)}</div><div class="hq-ans">你的选择：${showSel} ｜ 正确答案：${showAns}</div>${explainHtml(q)}</div>`;
+  }).join('');
+  const side=$('#rd-side');
+  if(side)side.innerHTML=`<div class="rd-result-head"><b>《${esc(p.key)}》批改结果</b><span>答对 ${okN}/${n} · 正确率 ${pct}%</span></div>${rows}<div class="rd-nav"><button class="primary" id="rd-again">${practiceKind==='reading'?'再做一篇（自动换文体）→':'再做一篇 →'}</button><button class="outline" id="rd-end">结束练习</button></div>`;
+  const again=$('#rd-again');if(again)again.onclick=()=>renderReadingPass();
+  const end=$('#rd-end');if(end)end.onclick=()=>{closeSession();practiceMode='free';practiceArmed=false;showView('home');toast('已结束阅读练习')};
+  updateStats();
+}
+function drawReading(){
+  const groups=groupReadingQs();const keys=Object.keys(groups);
+  if(!keys.length){$('#practice-card').innerHTML='<div class="empty-state">暂无阅读材料。</div>';return}
+  const key=choosePassKey()||keys[0];
+  rRecent.push(key);if(rRecent.length>6)rRecent.shift();
+  rCur={key,items:groups[key].map(q=>({q,sel:null})),idx:0};
+  qStart=Date.now();
+  if($('#practice-index'))$('#practice-index').textContent=`阅读理解 · ${key}`;
+  renderReadingSheet();
+}

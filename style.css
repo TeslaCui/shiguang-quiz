@@ -213,3 +213,13 @@
 .rd-qtext{font-size:16px;line-height:1.9;color:#201b33;margin-bottom:12px}
 .rd-result{margin-top:10px}
 .rd-result-head{margin:10px 0 12px}.rd-result-head b{font-size:18px}.rd-result-head span{font-size:13px;color:#8e8a9f;display:block;margin-top:4px}
+
+/* reading v3: article left, questions right */
+.rd-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:start}
+.rd-article{position:sticky;top:12px}
+.rd-titlecard{background:linear-gradient(90deg,#f2eeff,#fdf9ff);border:1px solid #e3daf7;border-radius:12px 12px 0 0;padding:12px 16px;display:flex;flex-direction:column;gap:3px}
+.rd-titlecard b{font-size:21px;color:#201b33}.rd-titlecard span{font-size:12px;color:#8e8a9f}
+.rd-titlecard+.rd-mat{border-radius:0 0 12px 12px;border-top:0;margin:0 0 4px;max-height:62vh}
+.rd-side .rd-qmeta{font-size:12px;color:var(--purple);font-weight:700;margin-bottom:10px}
+.rd-mini{font-size:11px;color:#aaa5b3;text-align:center;margin-top:8px}
+@media(max-width:1024px){.rd-layout{grid-template-columns:1fr}.rd-article{position:static}.rd-titlecard+.rd-mat{max-height:36vh}}
