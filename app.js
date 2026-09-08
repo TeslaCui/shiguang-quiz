@@ -218,7 +218,7 @@ function updateStats(){
   let streak=0;const cur=new Date();if(!days.includes(dayKey(cur.getTime())))cur.setDate(cur.getDate()-1);
   while(days.includes(dayKey(cur.getTime()))){streak++;cur.setDate(cur.getDate()-1)}
   $('#streak-count')&&($('#streak-count').textContent=streak);$('#checkin-count')&&($('#checkin-count').textContent=days.length);
-  const fmt=(x)=>`<div class="recent-row clickable" data-nav-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
+  const fmt=(x)=>`<div class="recent-row clickable" data-nav-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}${rdCnt(x.start)?` · 阅读 ${rdCnt(x.start)} 题`:''}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span></div>`;
   $('#recent-list').innerHTML=ses.length?ses.slice(-5).reverse().map(fmt).join(''):'<div class="empty-state">还没有练习记录，开始第一题吧。</div>';
   $$('#recent-list [data-nav-start]').forEach(el=>el.onclick=()=>openHistoryDetail(el.dataset.navStart));
   renderCalendar();renderAnalysis();
@@ -283,12 +283,16 @@ function renderWrong(){
   const rows=w.map(q=>{const s=stat[q.id]||{n:0,last:0};return {q,n:s.n,last:s.last}});
   rows.sort(wrongSort==='most'?(a,b)=>b.n-a.n||b.last-a.last:(a,b)=>b.last-a.last||b.n-a.n);
   $('#wrong-count')&&($('#wrong-count').textContent=rows.length);
-  $('#wrong-list').innerHTML=rows.length?rows.map(({q,n})=>`<div class="hist-item"><div class="recent-row wrong-row" data-id="${esc(q.id)}"><span class="mini-icon pink">⚑</span><div class="wrong-body"><b>${esc(shortQ(q.question))}</b></div><span class="wcount">错 ${n} 次</span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
+  $('#wrong-list').innerHTML=rows.length?rows.map(({q,n})=>{
+    const rchip=q.rType==='classical'?'文言阅读':q.rType==='modern'?'白话阅读':(q.source&&q.source.includes('阅读题')?'阅读':null);
+    return `<div class="hist-item"><div class="recent-row wrong-row" data-id="${esc(q.id)}"><span class="mini-icon pink">⚑</span>${rchip?`<span class="q-badge ${q.rType==='modern'?'b-modern':'b-classical'}" style="font-size:10px;padding:2px 8px">${rchip}</span>`:''}<div class="wrong-body"><b>${esc(shortQ(q.question))}</b></div><span class="wcount">错 ${n} 次</span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
+  }).join(''):'<div class="empty-state">还没有错题，继续保持！</div>';
   $$('#wrong-list .wrong-row').forEach(r=>r.onclick=()=>toggleWrong(r));
 }
 function renderHistoryList(){
   const ses=read('sessions');
-  const fmt=(x)=>`<div class="hist-item"><div class="recent-row clickable" data-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
+  const _rd=read('details');const _rc={};_rd.forEach(v=>{if(v.kind==='classical'||v.kind==='modern'||v.kind==='reading')_rc[v.start]=(_rc[v.start]||0)+1});
+  const fmt=(x)=>`<div class="hist-item"><div class="recent-row clickable" data-start="${x.start}"><span class="mini-icon blue">◷</span><div><b>${esc(x.bank||'中华文化知识库')}</b><small>${new Date(x.start).toLocaleString('zh-CN')} · ${x.qCount} 题 · 用时 ${fmtMin(x.sec)}${rdCnt(x.start)?` · 阅读 ${rdCnt(x.start)} 题`:''}</small></div><span class="score">${x.qCount?Math.round((x.correct||0)/x.qCount*100):0}<span>%</span></span><span class="arr">▾</span></div><div class="inline-detail"></div></div>`;
   $('#history-list').innerHTML=ses.length?ses.slice().reverse().map(fmt).join(''):'<div class="empty-state">完成一次练习后，这里会显示记录。</div>';
   $$('#history-list .hist-item .recent-row').forEach(row=>row.onclick=()=>toggleInline(row));
 }
@@ -298,6 +302,7 @@ function renderReview(){
 }
 function detailRowsHtml(items){
   const TYPE={single:'单选',multiple:'多选',judge:'判断',fill:'填空'};
+  const TYPE_LABEL=(x)=>x.kind==='classical'?'文言阅读':x.kind==='modern'?'白话阅读':x.kind==='reading'?'阅读':(TYPE[x.type]||'题目');
   const chosenText=(x)=>{
     const ch=x.chosen||'';
     if(!ch)return x.ok?'（自评：正确）':'（自评：错误）';
@@ -307,7 +312,7 @@ function detailRowsHtml(items){
     const durMs=x.durMs??(i===0?(x.start?(x.ts-x.start):0):(x.ts-items[i-1].ts));
     const sec=Math.max(0,Math.round((durMs||0)/1000));
     const lim=qLimitOf(x),over=sec>lim;
-    return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE[x.type]||'题'}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur ${over?'over-time':''}">用时 ${fmtClock(sec)}${over?'（超时）':''}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
+    return `<div class="hist-q ${x.ok?'ok':'no'}"><div class="hq-head"><b>${TYPE_LABEL(x)}${i+1}</b><span class="hq-res">${x.ok?'答对 ✓':'答错 ✗'}</span><span class="hq-dur ${over?'over-time':''}">用时 ${fmtClock(sec)}${over?'（超时）':''}</span></div><div class="hq-q">${esc(shortQ(x.q))}</div><div class="hq-ans">你的选择：${esc(chosenText(x))} ｜ 正确答案：${esc(x.ans||'—')}</div></div>`;
   }).join('');
 }
 function toggleInline(row){
@@ -987,3 +992,5 @@ function matHtml(mat){
   const blocks=raw.split(/\n\s*\n|(?=[①②③④⑤⑥⑦⑧⑨⑩])/).map(s=>s.trim()).filter(Boolean);
   return `<div class="reading-mat rd-mat">${blocks.map(s=>`<p>${esc(s)}</p>`).join('')}</div>`;
 }
+
+function rdCnt(start){let c=0;let arr=[];try{arr=JSON.parse(localStorage.getItem('sg:anon:details')||'[]')}catch(e){}for(const v of arr){if((v.kind==='classical'||v.kind==='modern'||v.kind==='reading')&&v.start===start)c++}return c||0}
