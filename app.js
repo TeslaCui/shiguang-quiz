@@ -1008,5 +1008,5 @@ function matHtml(mat){
   return `<div class="reading-mat rd-mat">${blocks.map(s=>`<p>${esc(s)}</p>`).join('')}</div>`;
 }
 
-function rdCnt(start){let c=0;let arr=[];try{arr=JSON.parse(localStorage.getItem('sg:anon:details')||'[]')}catch(e){}for(const v of arr){if((v.kind==='classical'||v.kind==='modern'||v.kind==='reading')&&v.start===start)c++}return c||0}
+function rdCnt(start){let c=0;let arr=[];try{arr=JSON.parse(localStorage.getItem(`sg:${NS()}:details`)||'[]')}catch(e){}for(const v of arr){if((v.kind==='classical'||v.kind==='modern'||v.kind==='reading')&&v.start===start)c++}return c||0}
 
