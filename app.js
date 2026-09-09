@@ -607,7 +607,7 @@ $$('[data-wsort]').forEach(b=>b.onclick=()=>{wrongSort=b.dataset.wsort;$$('[data
 
 $('#clear-wrong').onclick=async()=>{write('wrong-questions',[]);const s=srsStore();for(const id in s.qs)if(s.qs[id].wrongStreak>0){s.qs[id].wrongStreak=0;s.qs[id].box=0}srsSave(s);if(user&&db){try{await db.from('wrong_questions').delete().eq('user_id',user.id)}catch(e){}}renderReview();updateStats();toast('已清空错题本')};
 // ---- cloud sync (per current user namespace) ----
-async function loadCloudForUser(){
+async function loadCloudForUser(silent=false){
   if(!user||!db)return;
   try{
     const [w,r,ps]=await Promise.all([
@@ -636,7 +636,8 @@ async function loadCloudForUser(){
       }
       if(added){loc.sort((a,b)=>a.start-b.start);write('sessions',loc)}
     }
-    updateStats();renderReview();renderQuestion();
+    updateStats();
+    if(!silent||!document.querySelector('#practice-view')?.classList.contains('active-view')){renderReview();renderQuestion();}
   }catch(e){}
 }
 async function syncUserData(){await loadCloudForUser()}
@@ -726,9 +727,12 @@ $('#auth-submit').onclick=handleAuthSubmit;
 migrateLegacy();renderBanks();renderReview();updateStats();renderCalendar();
 fetch('questions.json').then(r=>r.ok?r.json():[]).then(x=>{questions=enrichQuestions(x.map(normalize)).concat(read('uploaded-questions'));const groups=bankGroups();activeBank=groups['中华文化题库']?'中华文化题库':Object.keys(groups)[0]||'中华文化题库';practiceQuestions=(groups[activeBank]||[]).filter(q=>!q.needsReview);renderBanks();renderQuestion();updateStats()}).catch(()=>renderQuestion());
 updateAuth();renderCalendar();renderAccountPanel();syncAuthButtons();
+let _autoSync=null;
+function startAutoSync(){if(!user||!db)return;if(_autoSync)return;_autoSync=setInterval(()=>{if(!document.hidden)loadCloudForUser(true).catch(()=>{})},30000)}
+function stopAutoSync(){if(_autoSync){clearInterval(_autoSync);_autoSync=null}}
 if(db){
-  db.auth.getSession().then(({data})=>{user=data.session?.user||null;updateAuth();if(user){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}}).catch(()=>{});
-  db.auth.onAuthStateChange((_event,session)=>{const changed=session?.user?.id!==(user&&user.id);user=session?.user||null;updateAuth();if(user&&changed){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{})}else if(!user){renderReview();updateStats();renderQuestion();}});
+  db.auth.getSession().then(({data})=>{user=data.session?.user||null;updateAuth();if(user){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{});startAutoSync()}else{stopAutoSync()}}).catch(()=>{});
+  db.auth.onAuthStateChange((_event,session)=>{const changed=session?.user?.id!==(user&&user.id);user=session?.user||null;updateAuth();if(user&&changed){ensureProfile().catch(()=>{});loadCloudForUser().catch(()=>{});startAutoSync()}else if(!user){stopAutoSync();renderReview();updateStats();renderQuestion();}});
 }
 
 /* ================= 阅读试卷（整篇材料 + 多小题 + 一次批改） ================= */
