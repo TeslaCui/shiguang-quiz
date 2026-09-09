@@ -509,11 +509,11 @@ const fields={identifier:$('#auth-identifier'),username:$('#auth-username'),emai
 Object.entries(fields).forEach(([name,el])=>{if(!el)return;const visible=name==='password'||(name==='identifier'&&!signup)||((name==='username'||name==='email'||name==='phone'||name==='confirm')&&signup);el.hidden=!visible;el.style.display=visible?'block':'none'})}
 $('#auth-open').onclick=openAuth;$('#auth-close').onclick=closeAuth;$('#auth-switch').onclick=()=>setAuthMode(authMode==='login'?'signup':'login');
 const googleAuthBtn=$('#google-auth');if(googleAuthBtn)googleAuthBtn.onclick=async()=>{if(!db)return $('#auth-message').textContent='登录服务暂不可用';$('#auth-message').textContent='正在前往 Google 登录…';const redirectTo=location.protocol==='file:'?'https://teslacui.github.io/shiguang-quiz/':location.origin+location.pathname;const r=await db.auth.signInWithOAuth({provider:'google',options:{redirectTo}});if(r.error)$('#auth-message').textContent=`Google 登录失败：${r.error.message}`};
-async function logout(){closeSession();if(db)await db.auth.signOut();user=null;sessionRecent=[];renderReview();updateStats();renderQuestion();updateAuth();toast('已退出登录（数据已切换）')}
+async function logout(){closeSession();if(db)await db.auth.signOut();user=null;sessionRecent=[];renderReview();updateStats();renderQuestion();updateAuth();renderAccountPanel();toast('已退出登录，当前为游客（本机）模式')}
 function syncAuthButtons(){const on=!!user;for(const id of ['auth-open2']){const el=$('#'+id);if(el)el.hidden=on}for(const id of ['auth-logout2','ctx-logout']){const el=$('#'+id);if(el)el.hidden=!on}}
 function renderAccountPanel(){
   const box=$('#set-account');if(!box)return;
-  if(!user){box.innerHTML='<div class="acct-empty">尚未登录。登录后可跨设备同步错题、记录与复习计划。</div>';return}
+  if(!user){box.innerHTML='<div class="acct-state">当前：<b>游客（本机）</b> — 记录只保存在这台设备的本机存储中，不会出现在其它设备。登录后可按账号跨设备同步。</div><div class="acct-empty">尚未登录。</div>';return}
   const meta=user.user_metadata||{};
   box.innerHTML=`<div class="acct-form">
     <label>用户名</label><input id="acct-username" value="${esc(meta.username||'')}" placeholder="用户名（至少 2 个字符）">
